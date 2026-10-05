@@ -1,7 +1,33 @@
 // Stateless read-only proxy: filter before responding; never persist upstream data.
 const STAFF = new Set(['宋佳臻', '鄭晴心', '郭澄希', '熊茗雅']);
 
-export function convertLeavePayload(employeesPayload, leavePayload, month) {
+export function parseMakeupDays(setting, month) {
+  const announcements = setting?.announcements ?? setting?.month_announcements;
+  if (!Array.isArray(announcements)) return null;
+  const days = new Set();
+  const expectedMonth = Number(month.slice(5));
+  const total = new Date(Number(month.slice(0, 4)), expectedMonth, 0).getDate();
+  for (const announcement of announcements) {
+    if (announcement?.is_active !== true) continue;
+    const text = `${announcement.title || ''} ${announcement.content || ''}`;
+    if (!text.includes('補薪')) continue;
+    const matches = [...text.matchAll(/(?:(\d{4})[/-])?(\d{1,2})[/-](\d{1,2})(?!\d)/g)];
+    if (!matches.length) return null;
+    for (const match of matches) {
+      if (match[1] && Number(match[1]) !== Number(month.slice(0, 4))) continue;
+      if (Number(match[2]) !== expectedMonth) continue;
+      const day = Number(match[3]);
+      if (day < 1 || day > total) return null;
+      days.add(day);
+      // Ambiguous shorthand/ranges must not silently omit additional days.
+      const tail = text.slice(match.index + match[0].length);
+      if (/^\s*(?:、|至|~|～|－|-)\s*\d+(?![\d/])/.test(tail)) return null;
+    }
+  }
+  return [...days].sort((a, b) => a - b);
+}
+
+export function convertLeavePayload(employeesPayload, leavePayload, month, setting = null) {
   const employees = Array.isArray(employeesPayload) ? employeesPayload : employeesPayload?.data;
   if (!Array.isArray(employees) || !leavePayload?.data || typeof leavePayload.data !== 'object') throw new Error('Invalid upstream payload');
   if (leavePayload.month && leavePayload.month !== month) throw new Error('Wrong source month');
@@ -29,8 +55,9 @@ export function convertLeavePayload(employeesPayload, leavePayload, month) {
   }
   if ([...STAFF].some(name => !people[name])) throw new Error('Incomplete staff data');
   // Missing announcement/quota fields remain unknown; never invent zero or empty days.
-  const maxDays = typeof leavePayload.maxDays === 'number' && Number.isFinite(leavePayload.maxDays) ? leavePayload.maxDays : null;
-  const payMakeupDays = Array.isArray(leavePayload.payMakeupDays) && leavePayload.payMakeupDays.every(day => Number.isInteger(Number(day)) && Number(day) >= 1 && Number(day) <= total)
+  const sourceQuota = setting?.max_days ?? leavePayload.maxDays;
+  const maxDays = typeof sourceQuota === 'number' && Number.isFinite(sourceQuota) ? sourceQuota : null;
+  const payMakeupDays = setting ? parseMakeupDays(setting, month) : Array.isArray(leavePayload.payMakeupDays) && leavePayload.payMakeupDays.every(day => Number.isInteger(Number(day)) && Number(day) >= 1 && Number(day) <= total)
     ? [...new Set(leavePayload.payMakeupDays.map(Number))] : null;
   return { month, people, maxDays, payMakeupDays, syncedAt: new Date().toISOString() };
 }
@@ -56,8 +83,8 @@ export default {
         if (!response.ok) throw new Error('Source unavailable');
         return response.json();
       };
-      const [employees, leave] = await Promise.all([read(`/api/employees?month=${month}`), read(`/api/leave/${month}`)]);
-      return reply(200, convertLeavePayload(employees, leave, month));
+      const [employees, leave, setting] = await Promise.all([read(`/api/employees?month=${month}`), read(`/api/leave/${month}`), read(`/api/setting/${month}`).catch(() => null)]);
+      return reply(200, convertLeavePayload(employees, leave, month, setting));
     } catch { return reply(502, { success: false, error: 'Leave source unavailable or incomplete' }); }
   }
 };

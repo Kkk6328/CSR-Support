@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import worker, { convertLeavePayload } from '../leave-proxy/worker.mjs';
+import worker, { convertLeavePayload, parseMakeupDays } from '../leave-proxy/worker.mjs';
 
 const employees = ['宋佳臻', '鄭晴心', '郭澄希', '熊茗雅', '非目標人員'].map((name, id) => ({ name, id, shift: id === 1 || id === 2 ? '晚班' : '早班', account: 'excluded' }));
 const leave = { month: '2026-10', data: { 0: { 1: { shift: 'black', leave: [] }, 2: { shift: '', leave: ['病2'] } }, 4: { 9: { shift: 'red' } } }, stars: [{ employee_id: 1, day: 3 }], maxDays: 10, payMakeupDays: [10, 25] };
@@ -30,13 +30,13 @@ test('proxy is unconfigured until explicitly deployed; it rejects writes, foreig
   assert.equal((await worker.fetch(new Request('https://proxy.test/?month=2026-10', { headers: { Origin: 'https://other.test' } }), env)).status, 403);
   assert.equal((await worker.fetch(new Request('https://proxy.test/?month=2026-99'), env)).status, 400);
 });
-test('proxy reads both endpoints without saving or caching their contents', async () => {
+test('proxy reads three endpoints without saving or caching their contents', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (url, options) => { requests.push([String(url), options]); return Response.json(String(url).includes('/employees') ? employees : leave); };
   try {
     const response = await worker.fetch(new Request('https://proxy.test/?month=2026-10', { headers: { Origin: 'https://example.test' } }), { ALLOWED_ORIGIN: 'https://example.test', LEAVE_SOURCE_BASE: 'http://source.test' });
-    assert.equal(response.status, 200); assert.equal(requests.length, 2);
+    assert.equal(response.status, 200); assert.equal(requests.length, 3);
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://example.test');
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
     assert(requests.every(([, options]) => options.cache === 'no-store'));
@@ -53,4 +53,21 @@ test('browser source coalesces reads, rejects malformed data and reports HTTP fa
   assert.throws(() => window.csrLeaveSource.normalize({ ...normalized(), people: {} }, '2026-10'));
   status = 403;
   await assert.rejects(window.csrLeaveSource.read('2026-10'), /HTTP 403/);
+});
+
+test('active makeup announcements determine dates; missing or ambiguous announcements remain unknown', () => {
+  const setting = { max_days: 10, announcements: [
+    { is_active: true, title: '10/10 Holiday', content: '補薪' },
+    { is_active: true, title: '10/25 Holiday', content: '補薪' },
+    { is_active: false, title: '10/3', content: '補薪' },
+    { is_active: true, title: '10/15', content: 'Travel' }
+  ] };
+  assert.deepEqual(parseMakeupDays(setting, '2026-10'), [10, 25]);
+  assert.deepEqual(parseMakeupDays({ announcements: [] }, '2026-10'), []);
+  assert.equal(parseMakeupDays({}, '2026-10'), null);
+  assert.equal(parseMakeupDays({ announcements: [{ is_active: true, content: '補薪日期待定' }] }, '2026-10'), null);
+  assert.equal(parseMakeupDays({ announcements: [{ is_active: true, title: '10/10、11', content: '補薪' }] }, '2026-10'), null);
+  const result = convertLeavePayload(employees, { data: {} }, '2026-10', setting);
+  assert.deepEqual(result.payMakeupDays, [10, 25]);
+  assert.equal(result.maxDays, 10);
 });
