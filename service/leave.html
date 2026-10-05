@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>休假表｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260827-dark-view-fix" />
+  <style>
+    .external-leave-label { display: inline-block; margin-left: 0; font-size: 11px; line-height: 1; font-weight: 800; color: var(--text); }
+    .leave-table .name-col { left: 0; min-width: 110px; width: 110px; max-width: 110px; }
+    .leave-toolbar-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 350px; }
+    .leave-sync-time { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); color: var(--text-secondary); }
+    .leave-sync-time span { font-size: 13px; font-weight: 700; }
+    .leave-sync-time strong { color: var(--text); font-size: 14px; }
+    .leave-sync-time.is-error { border-color: #fecaca; background: #fef2f2; }
+    .leave-sync-time.is-error span { color: #b91c1c; }
+    .leave-summary-cards { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .leave-summary-card { min-width: 0; max-height: 132px; overflow: auto; padding: 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .leave-summary-card h3 { margin: 0 0 7px; font-size: 17px; line-height: 1.35; }
+    .leave-paymakeup-note { margin: -3px 0 7px; font-size: 14px; font-weight: 700; color: #f59e0b; }
+    .pay-makeup-tag { color: #f59e0b; font-weight: 700; }
+    .leave-summary-card-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; font-size: 15px; line-height: 1.65; }
+    .leave-summary-shift > strong { display: block; margin-bottom: 3px; font-size: 15px; }
+    .leave-summary-shift ul { margin: 0; padding-left: 18px; }
+    .leave-summary-shift li { margin: 2px 0; white-space: normal; }
+    .leave-table th, .leave-table td { font-size: 15px; }
+    .leave-table .name-col { font-size: 16px; line-height: 1.35; }
+    .leave-table .name-col small { font-size: 14px; }
+    .leave-table .day-col span { font-size: 16px; font-weight: 800; }
+    .leave-table .day-col small { font-size: 13px; line-height: 1.25; }
+    .leave-table .leave-cell-button { font-size: 17px; }
+    .leave-table .external-leave-label, .leave-table .special-icons { font-size: 16px; font-weight: 800; }
+    .leave-table .day-col.is-today { background: color-mix(in srgb, var(--primary) 24%, var(--surface)) !important; box-shadow: inset 0 3px 0 var(--primary); color: var(--primary); }
+    .leave-table .leave-day.is-today { background: color-mix(in srgb, var(--primary) 10%, var(--surface)) !important; }
+    .leave-table .leave-day.is-today .leave-cell-button { background: color-mix(in srgb, var(--primary) 18%, var(--surface-muted)); outline: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); }
+    @media (max-width: 1024px) {
+      .leave-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+      }
+      .leave-toolbar {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .leave-summary-cards {
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .leave-summary-card-content { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      .leave-toolbar-wrap {
+        width: 100%;
+        min-width: 0;
+      }
+      .leave-toolbar {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        width: 100%;
+        gap: 8px;
+      }
+      .leave-toolbar .secondary-button,
+      .leave-toolbar .ghost-button {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 8px;
+        white-space: nowrap;
+      }
+      #leaveMonthLabel {
+        align-self: center;
+        white-space: nowrap;
+      }
+      #todayLeaveMonth { grid-column: 1 / -1; }
+      .leave-sync-time {
+        min-height: 46px;
+        padding: 8px 10px;
+      }
+      .leave-summary-cards {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .leave-summary-card {
+        max-height: none;
+      }
+      .leave-summary-card-content {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        font-size: 14px;
+      }
+      .leave-meta { padding: 10px; }
+      .leave-legend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .leave-table-wrap {
+        max-height: none;
+        padding: 0 !important;
+      }
+      .leave-table {
+        width: max-content;
+        min-width: max-content !important;
+        table-layout: auto;
+      }
+      .leave-table .name-col {
+        min-width: 104px;
+        width: 104px;
+        max-width: 104px;
+      }
+      .leave-table .day-col,
+      .leave-table .leave-day {
+        min-width: 44px;
+        width: 44px;
+      }
+    }
+  </style>
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body>
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>休假表</h1>
+          <p>客服團隊休假資訊維護。</p>
+        </div>
+        <div class="user-pill" id="leaveSourceStatus">● 休假資料連動中</div>
+      </header>
+      <section class="leave-panel" aria-label="休假表">
+        <div class="panel-heading leave-heading">
+         <div class="leave-toolbar-wrap">
+           <div class="leave-toolbar" aria-label="月份切換與特殊標記">
+              <button class="secondary-button" id="prevLeaveMonth" type="button">← 上個月</button>
+              <strong id="leaveMonthLabel">—</strong>
+              <button class="secondary-button" id="nextLeaveMonth" type="button">下個月 →</button>
+              <button class="ghost-button" id="todayLeaveMonth" type="button">本月</button>
+            </div>
+            <div class="leave-sync-time" id="leaveSyncTime" aria-live="polite">
+              <span>每 5 分鐘自動更新</span>
+              <strong>下次更新 05:00</strong>
+            </div>
+          </div>
+          <div class="leave-summary-cards" aria-label="當月排班摘要">
+            <section class="leave-summary-card">
+              <h3>值公務機</h3>
+              <div class="leave-summary-card-content" id="phoneDutySummary">載入中...</div>
+            </section>
+            <section class="leave-summary-card">
+              <h3>彈性早退（W3早班／補薪日全班 皆禁早退）</h3>
+              <p class="leave-paymakeup-note" id="payMakeupNote" hidden></p>
+              <div class="leave-summary-card-content" id="flexibleLeaveSummary">載入中...</div>
+            </section>
+          </div>
+        </div>
+
+        <div class="leave-meta">
+          <p id="leaveLegend" class="leave-legend"><span class="leave-marker">▲</span> 休假　<span class="leave-marker is-required">▲</span> 必休　<button class="leave-legend-button special-mode-button" id="phoneSpecialMode" type="button" data-special="phone" aria-pressed="false" title="先點此按鈕，再點休假表的空白格，即可新增或移除值公務機">值公務機</button></p>
+          <p class="leave-status" id="leaveStatus" data-type="info" hidden></p>
+        </div>
+
+        <div class="leave-table-wrap" aria-label="可左右滑動的休假表">
+          <table class="leave-table" id="leaveTable">
+            <thead id="leaveTableHead"></thead>
+            <tbody id="leaveTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="../assets/leave.js?v=20261005-paymakeup-failclosed"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>交接｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260906-handover-stretch-textareas" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body class="handover-page" data-reminder-module="handover">
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>交接</h1>
+          <p>客服班別交接事項。</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="secondary" id="designTableButton" type="button" hidden>設計表格</button>
+          <div class="user-pill">● 已連線 Firebase</div>
+        </div>
+      </header>
+      <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
+        <div class="ragic-toolbar">
+          <div><h2 id="ragicTitle"></h2><p id="ragicSubtitle"></p></div>
+          <button class="primary" id="newRecordButton" type="button">+ 新增</button>
+        </div>
+        <div class="ragic-table-wrap">
+          <table class="ragic-table">
+            <thead><tr id="ragicHeaderRow"></tr></thead>
+            <tbody id="ragicTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="ragic-card" id="ragicFormView" aria-label="主表單視圖" hidden>
+        <div class="ragic-form-toolbar"><h2></h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <form id="ragicForm"></form>
+        <div class="ragic-actions">
+          <button class="ghost danger" id="deleteButton" type="button">刪除</button>
+          <button class="primary" form="ragicForm" type="submit">儲存</button>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/ragic-table.js?v=20260905-designer-layout-source"></script>
+  <script>
+    initRagicPage({
+      title: '交接',
+      collection: 'workHandover',
+      compactEmptyColumns: true,
+      fields: [
+        { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
+        { key: 'shift', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
+        { key: 'department', label: '部門', type: 'text', formRow: 1, formCol: 3 },
+        { key: 'category', label: '分類', type: 'text', formRow: 1, formCol: 4 },
+        { key: 'status', label: '狀態', type: 'select', options: ['已完成', '處理中', '必看'], formRow: 2, formCol: 2 },
+        { key: 'item', label: '交接事項', type: 'textarea', rows: 6, formRow: 4, formCol: 1, formColSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'publisher', label: '發佈者', type: 'text', formRow: 2, formCol: 1 },
+        { key: 'finisher', label: '完成者', type: 'text', formRow: 2, formCol: 3 },
+        { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 3, formCol: 4 },
+        { key: 'link', label: '連結', type: 'link', formRow: 3, formCol: 1 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 2 },
+        { key: 'attachment', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
+        { key: 'image', label: '圖片', type: 'image', formRow: 2, formCol: 4, formRowSpan: 2 },
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 5, formCol: 1 },
+        { key: 'createdAt', label: '建立時間', type: 'createdDate', formRow: 3, formCol: 8, formColSpan: 3 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 5, formCol: 3 }
+      ],
+      formLayout: {
+        version: 'handover-view-v9',
+        columns: 10,
+        rows: 5,
+        fields: {
+          date: { row: 1, col: 1, colSpan: 2 },
+          shift: { row: 1, col: 3, colSpan: 1 },
+          department: { row: 1, col: 4, colSpan: 2 },
+          category: { row: 1, col: 6, colSpan: 2 },
+          status: { row: 1, col: 8, colSpan: 1 },
+          publisher: { row: 1, col: 9, colSpan: 2 },
+          item: { row: 2, col: 1, colSpan: 7, height: 220 },
+          image: { row: 2, col: 8, colSpan: 3, height: 220 },
+          note: { row: 3, col: 1, colSpan: 7, height: 150 },
+          attachment: { row: 3, col: 8, colSpan: 3, height: 150 },
+          link: { row: 4, col: 1, colSpan: 4 },
+          reminder_enabled: { row: 4, col: 5, colSpan: 2 },
+          reminder_at: { row: 4, col: 7, colSpan: 4 },
+          finisher: { row: 5, col: 1, colSpan: 2 },
+          completed_at: { row: 5, col: 3, colSpan: 2 },
+          serial: { row: 5, col: 5, colSpan: 1 },
+          updated_time: { row: 5, col: 6, colSpan: 2 },
+          createdAt: { row: 5, col: 8, colSpan: 3 }
+        }
+      },
+      listColumns: ['date', 'shift', 'department', 'category', 'status', 'item', 'note', 'publisher', 'finisher', 'completed_at', 'image', 'attachment', 'updated_time', 'createdAt', 'serial']
+    });
+  </script>
+</body>
+</html>

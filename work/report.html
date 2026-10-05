@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>提報｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260827-dark-view-fix" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body data-reminder-module="report">
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>提報</h1>
+          <p>問題提報與內部追蹤。</p>
+        </div>
+        <div class="user-pill">● 已連線 Firebase</div>
+      </header>
+      <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
+        <div class="ragic-toolbar">
+          <div><h2 id="ragicTitle"></h2><p id="ragicSubtitle"></p></div>
+          <button class="primary" id="newRecordButton" type="button">+ 新增</button>
+        </div>
+        <div class="ragic-table-wrap">
+          <table class="ragic-table">
+            <thead><tr id="ragicHeaderRow"></tr></thead>
+            <tbody id="ragicTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="ragic-card" id="ragicFormView" aria-label="主表單視圖" hidden>
+        <div class="ragic-form-toolbar"><h2></h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <form id="ragicForm"></form>
+        <div class="ragic-actions">
+          <button class="ghost danger" id="deleteButton" type="button">刪除</button>
+          <button class="primary" form="ragicForm" type="submit">儲存</button>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/ragic-table.js?v=20260827-dark-view-fix"></script>
+  <script>
+    const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
+    sessionStorage.removeItem('reportTrackingFilter');
+    initRagicPage({
+      title: '提報',
+      collection: 'report',
+      trackingStatuses: reportTrackingMode ? ['待辦中', '處理中', '觀察中', '追客'] : null,
+      initialFilters: reportTrackingMode
+        ? { status: ['待辦中', '處理中', '觀察中', '追客', '追"客"'] }
+        : {},
+      enforceConfigFields: true,
+      fields: [
+        { key: 'date', label: '日期', type: 'date', defaultToday: true, formRow: 1, formCol: 1 },
+        { key: 'reporter', label: '班別', type: 'select', options: ['早班', '晚班'], formRow: 1, formCol: 2 },
+        { key: 'category', label: '部門', type: 'select', options: ['技術', '商務'], formRow: 1, formCol: 3 },
+        { key: 'subject', label: '分類', type: 'text', formRow: 1, formCol: 4 },
+        { key: 'content', label: '級數', type: 'select', options: ['一級', '二級', '三級'], formRow: 1, formCol: 5 },
+        { key: 'field_1783792645702_pi66u', label: '客戶', type: 'text', formRow: 2, formCol: 1, formColSpan: 2 },
+        { key: 'status', label: '狀態', type: 'select', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], formRow: 2, formCol: 3 },
+        { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'select', defaultCurrentUser: true, options: ['佳臻', '晴心', '澄希', '茗雅', '中魁', 'Rondo', '于慧', '芯瑜', '志忠'], formRow: 2, formCol: 4 },
+        { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'link', formRow: 3, formCol: 4, formColSpan: 2 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 2, formCol: 5 },
+        { key: 'field_1783793518050_ijdc6', label: '完成者', type: 'text', formRow: 3, formCol: 1 },
+        { key: 'field_1783793539632_yakx0', label: '完成時間', type: 'datetime', formRow: 3, formCol: 2 },
+        { key: 'field_1783889793781_euuc0', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 3 },
+        { key: 'field_1783889767182_tuy8x', label: '檔案', type: 'file', formRow: 6, formCol: 1, formColSpan: 3 },
+        { key: 'field_1783793551894_qk3ol', label: '圖片', type: 'image', formRow: 4, formCol: 4, formColSpan: 2, formRowSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 5, formRow: 4, formCol: 1, formColSpan: 3, formRowSpan: 2 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 6, formCol: 4 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', defaultValue: true, formRow: 6, formCol: 5 },
+        { key: 'issue', label: '問題描述', type: 'textarea', rows: 4, formRow: 7, formCol: 1, formColSpan: 5 }
+      ],
+      subtable: {
+        key: 'field_1783793415787_ht9q7',
+        label: '子表格',
+        formRow: 8,
+        formCol: 1,
+        formColSpan: 5,
+        columnsPerRow: 4,
+        fields: [
+          { key: 'content', label: '內容', type: 'textarea', rows: 4 },
+          { key: 'service_reply', label: '客服處理', type: 'textarea', rows: 4 },
+          { key: 'it_reply', label: '技術/IT 回覆', type: 'textarea', rows: 4 },
+          { key: 'am_reply', label: '商務/AM 回覆', type: 'textarea', rows: 4 }
+        ]
+      },
+      formLayout: {
+        version: '20260810-report-issue1',
+        columns: 5,
+        rows: 8,
+        fields: {
+          date: { row: 1, col: 1 },
+          reporter: { row: 1, col: 2 },
+          category: { row: 1, col: 3 },
+          subject: { row: 1, col: 4 },
+          content: { row: 1, col: 5 },
+          field_1783792645702_pi66u: { row: 2, col: 1, colSpan: 2 },
+          status: { row: 2, col: 3 },
+          field_1783793487601_dbb5n: { row: 2, col: 4 },
+          serial: { row: 2, col: 5 },
+          field_1783793518050_ijdc6: { row: 3, col: 1 },
+          field_1783793539632_yakx0: { row: 3, col: 2 },
+          field_1783889793781_euuc0: { row: 3, col: 3 },
+          field_1783793471256_rn925: { row: 3, col: 4, colSpan: 2 },
+          note: { row: 4, col: 1, colSpan: 3, rowSpan: 2 },
+          field_1783793551894_qk3ol: { row: 4, col: 4, colSpan: 2, rowSpan: 2 },
+          field_1783889767182_tuy8x: { row: 6, col: 1, colSpan: 3 },
+          reminder_at: { row: 6, col: 4 },
+          reminder_enabled: { row: 6, col: 5 },
+          issue: { row: 7, col: 1, colSpan: 5 },
+          field_1783793415787_ht9q7: { row: 8, col: 1, colSpan: 5 }
+        }
+      },
+      listColumns: [
+        'date',
+        'reporter',
+        'category',
+        'subject',
+        'content',
+        'field_1783792645702_pi66u',
+        'issue',
+        'status',
+        'field_1783793487601_dbb5n',
+        'field_1783793471256_rn925',
+        'serial',
+        'field_1783793518050_ijdc6',
+        'field_1783793539632_yakx0',
+        'field_1783889793781_euuc0',
+        'field_1783889767182_tuy8x',
+        'field_1783793551894_qk3ol',
+        'note',
+        'reminder_at',
+        'reminder_enabled'
+      ]
+    });
+  </script>
+</body>
+</html>

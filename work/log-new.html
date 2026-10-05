@@ -1,0 +1,2929 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>日誌 NEW｜OMNIPLAY 客服系統</title>
+  <meta name="log-new-ai-version" content="20260827-verification1" />
+  <link rel="stylesheet" href="../assets/styles.css?v=20260827-dark-view-fix" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+  <style>
+    .linked-report-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(3px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .linked-report-modal.show {
+      display: flex;
+    }
+    .linked-report-modal-content {
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      max-width: 90%;
+      width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    }
+    .linked-report-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-muted);
+    }
+    .linked-report-modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .linked-report-modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .linked-report-modal-close:hover {
+      color: var(--text);
+      background: var(--border);
+      border-radius: 8px;
+    }
+    .linked-report-form-wrapper {
+      padding: 20px;
+    }
+    .linked-report-info {
+      background: color-mix(in srgb, var(--primary) 12%, var(--surface-muted));
+      border-left: 4px solid var(--primary);
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .linked-report-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .linked-report-form-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .linked-report-form-field label {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+    }
+    .linked-report-form-field input,
+    .linked-report-form-field select,
+    .linked-report-form-field textarea {
+      padding: 8px 10px;
+      color: var(--text);
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .linked-report-form-field input:focus,
+    .linked-report-form-field select:focus,
+    .linked-report-form-field textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+    }
+    .linked-report-form-field input[readonly],
+    .linked-report-form-field select:disabled {
+      background: var(--surface-muted);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+      opacity: 1;
+    }
+    .linked-report-form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+    }
+    .linked-report-form-actions button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .linked-report-form-actions .btn-cancel {
+      background: var(--button-secondary-bg);
+      color: var(--button-secondary-text);
+      border: 1px solid var(--border);
+    }
+    .linked-report-form-actions .btn-cancel:hover {
+      background: var(--surface-muted);
+    }
+    .linked-report-form-actions .btn-submit {
+      background: var(--primary);
+      color: white;
+    }
+    .linked-report-form-actions .btn-submit:hover {
+      background: var(--primary-hover);
+    }
+    /* 日誌 NEW 的處理紀錄固定在可捲動區，避免長對話把整頁撐得過長。 */
+    #ragicForm [data-subtable="items"] > .ragic-table-wrap {
+      max-height: 380px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+    #ragicForm [data-subtable="items"] .ragic-view-subtable thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    #ragicForm [data-subtable="items"] .ragic-view-value {
+      max-height: 260px;
+      overflow-y: auto;
+      overflow-wrap: anywhere;
+    }
+    #ragicForm [data-subtable="items"] textarea {
+      max-height: 260px;
+      overflow-y: auto;
+      resize: vertical;
+    }
+    /* 日誌 NEW 處理紀錄：五欄、上下堆疊的固定位置。 */
+    #ragicForm [data-subtable="items"] .subtable-row-fields {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, .95fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1.2fr);
+      grid-template-rows: minmax(120px, auto) minmax(120px, auto);
+      width: 100%;
+      min-width: 0;
+      align-items: stretch;
+    }
+    #ragicForm [data-subtable="items"] > .ragic-table-wrap {
+      overflow-x: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field,
+    #ragicForm [data-subtable="items"] .subtable-row-field > *,
+    #ragicForm [data-subtable="items"] .image-upload-area,
+    #ragicForm [data-subtable="items"] input[type="file"] {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    #ragicForm [data-subtable="items"] .ragic-subtable-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #ragicForm [data-subtable="items"] .log-new-subtable-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) { grid-column: 1; grid-row: 1 / span 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) { grid-column: 2; grid-row: 1; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="business_processing"]) { grid-column: 2; grid-row: 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="ai_analysis"]) { grid-column: 3; grid-row: 1 / span 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) { grid-column: 4; grid-row: 1 / span 2; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="image_source"]) { grid-column: 5; grid-row: 1; }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) { grid-column: 5; grid-row: 2; }
+    #ragicForm [data-subfield-container="conversation_images"] .image-preview-list {
+      counter-reset: log-new-image;
+    }
+    #ragicForm [data-subfield-container="conversation_images"] .image-preview-item {
+      counter-increment: log-new-image;
+      position: relative;
+    }
+    #ragicForm [data-subfield-container="conversation_images"] .image-preview-item::before {
+      content: "圖" counter(log-new-image);
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      z-index: 2;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .86);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+    /* 圖片／檔案預覽固定留在自己的欄框內，禁止內容向上下欄位溢出。 */
+    #ragicForm .ragic-field-image.has-form-layout,
+    #ragicForm .ragic-field-file.has-form-layout {
+      min-width: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area,
+    #ragicForm .ragic-field-file.has-form-layout > .image-upload-area {
+      height: calc(100% - 18px) !important;
+      min-height: 0 !important;
+      padding: 5px 8px !important;
+      justify-content: flex-start !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+    #ragicForm .image-upload-area .image-preview-list {
+      display: flex !important;
+      flex-flow: row nowrap !important;
+      gap: 8px !important;
+      width: 100%;
+      min-width: 0;
+      margin: 4px 0 0 !important;
+      padding: 2px 4px 3px 2px;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      scrollbar-width: thin;
+      box-sizing: border-box;
+    }
+    #ragicForm .image-upload-area:has(.image-preview-list) > div:first-child {
+      display: none;
+    }
+    #ragicForm .image-upload-area .image-preview-item {
+      flex: 0 0 92px;
+      width: 92px;
+      height: 58px;
+      max-width: 92px !important;
+      margin: 0 !important;
+      overflow: visible;
+    }
+    #ragicForm .image-upload-area .image-preview-item img {
+      display: block;
+      width: 92px !important;
+      height: 54px !important;
+      max-width: 92px !important;
+      max-height: 54px !important;
+      object-fit: cover;
+      object-fit: contain;
+      background: #f3f4f6;
+    }
+    #ragicForm .image-upload-area .image-preview-item > span:not(.image-count-badge) {
+      display: none !important;
+    }
+    #ragicForm .image-upload-area .image-remove-btn {
+      top: -3px;
+      right: -3px;
+      width: 19px;
+      height: 19px;
+      z-index: 3;
+    }
+    #ragicForm [data-subfield-container="conversation_images"] {
+      min-height: 90px !important;
+      max-height: none;
+      padding: 5px 7px !important;
+      overflow-x: auto !important;
+      overflow-y: visible !important;
+      box-sizing: border-box;
+    }
+    #ragicForm .ragic-field-file.has-form-layout .ragic-file-preview {
+      max-width: 100%;
+      max-height: 54px;
+      margin-top: 4px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    #ragicDesignerModal #layoutDesignerPanel .layout-field {
+      width: auto !important;
+      height: auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+    }
+    #ragicDesignerModal #layoutDesignerPanel .layout-field b,
+    #ragicDesignerModal #layoutDesignerPanel .layout-field small {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* ===== 修正日誌 NEW 圖片預覽高度 ===== */
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: auto !important;
+     min-height: 220px !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area {
+     height: auto !important;
+     min-height: 200px !important;
+     max-height: none !important;
+     overflow: visible !important;
+     align-items: flex-start !important;
+    }
+
+    #ragicForm [data-subfield-container="conversation_images"] {
+     height: auto !important;
+     min-height: 200px !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .image-upload-area .image-preview-list {
+     display: flex !important;
+     flex-flow: row nowrap !important;
+     align-items: flex-start !important;
+     gap: 12px !important;
+
+     width: 100% !important;
+     min-width: 0 !important;
+     max-width: 100% !important;
+
+     height: auto !important;
+     max-height: none !important;
+
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+
+     padding-bottom: 12px !important;
+     box-sizing: border-box !important;
+    }
+
+    #ragicForm .image-upload-area .image-preview-item {
+     flex: 0 0 160px !important;
+     width: 160px !important;
+     height: 120px !important;
+     max-width: 160px !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .image-upload-area .image-preview-item img {
+     display: block !important;
+     width: 160px !important;
+     height: 110px !important;
+     max-width: 160px !important;
+     max-height: 110px !important;
+      object-fit: contain !important;
+     object-position: center !important;
+     background: #f3f4f6 !important;
+    } 
+    /* ===== 日誌 NEW：檢視與編輯圖片改為大型橫向滑動 ===== */
+
+    /* 圖片欄位容器 */
+    #ragicForm .ragic-field-image,
+    #ragicForm .ragic-field-image.has-form-layout,
+    #ragicForm [data-subfield-container="conversation_images"] {
+     width: 100% !important;
+     min-width: 0 !important;
+     height: auto !important;
+     min-height: 190px !important;
+     max-height: none !important;
+     overflow: hidden !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 編輯模式：圖片上傳區 */
+    #ragicForm .ragic-field-image > .image-upload-area,
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area,
+    #ragicForm [data-subfield-container="conversation_images"] .image-upload-area {
+     width: 100% !important;
+     height: auto !important;
+     min-height: 175px !important;
+     max-height: none !important;
+     overflow: hidden !important;
+     padding: 8px !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 編輯模式與檢視模式：圖片列表 */
+    #ragicForm .image-preview-list,
+    #ragicForm .ragic-view-value .image-preview-list,
+    #ragicForm .ragic-view-value:has(img) {
+     display: flex !important;
+     flex-flow: row nowrap !important;
+     flex-wrap: nowrap !important;
+     align-items: flex-start !important;
+     gap: 12px !important;
+
+     width: 100% !important;
+     min-width: 0 !important;
+     height: auto !important;
+     min-height: 145px !important;
+     max-height: none !important;
+   
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+     overscroll-behavior-x: contain;
+     scrollbar-width: thin;
+
+     padding: 6px 4px 10px !important;
+     margin: 0 !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 每一張圖片的外框 */
+    #ragicForm .image-preview-item,
+    #ragicForm .ragic-view-value .image-preview-item {
+     position: relative !important;
+     flex: 0 0 210px !important;
+     width: 210px !important;
+     min-width: 210px !important;
+     max-width: 210px !important;
+     height: 135px !important;
+     min-height: 135px !important;
+     max-height: 135px !important;
+     margin: 0 !important;
+     overflow: visible !important;
+    }
+
+     /* 圖片本體 */
+     #ragicForm .image-preview-item img,
+     #ragicForm .ragic-view-value .image-preview-item img,
+     #ragicForm .ragic-view-value > img {
+      display: block !important;
+      flex: 0 0 auto !important;
+
+      width: 210px !important;
+      min-width: 210px !important;
+      max-width: 210px !important;
+
+      height: 130px !important;
+      min-height: 130px !important;
+      max-height: 130px !important;
+
+      object-fit: contain !important;
+      object-position: center !important;
+
+      background: #f3f4f6 !important;
+      border: 1px solid #dbe2ea !important;
+      border-radius: 10px !important;
+      box-sizing: border-box !important;
+     }
+
+     /* 檢視模式若圖片沒有 image-preview-item 外框 */
+     #ragicForm .ragic-view-value:has(> img) {
+      gap: 12px !important;
+     }
+
+     #ragicForm .ragic-view-value:has(> img) > img {
+      flex: 0 0 210px !important;
+     }
+
+     /* 橫向捲軸 */
+     #ragicForm .image-preview-list::-webkit-scrollbar,
+     #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar {
+      height: 9px;
+     }
+
+     #ragicForm .image-preview-list::-webkit-scrollbar-thumb,
+     #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-thumb {
+      background: #b8c2cf;
+      border-radius: 999px;
+     }
+ 
+     #ragicForm .image-preview-list::-webkit-scrollbar-track,
+     #ragicForm .ragic-view-value:has(img)::-webkit-scrollbar-track {
+      background: #eef2f6;
+      border-radius: 999px;
+     }
+
+    /* ===== 日誌 NEW -7：檢視模式圖片橫向滑動最終修正 ===== */
+
+    /* 檢視模式的圖片欄位 */
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: 230px !important;
+     min-height: 230px !important;
+     max-height: 230px !important;
+     overflow: hidden !important;
+    }
+
+    /* 檢視模式圖片內容區 */
+    #ragicForm .ragic-field-image .ragic-view-value {
+     display: flex !important;
+     flex-direction: row !important;
+     flex-wrap: nowrap !important;
+     align-items: flex-start !important;
+     gap: 12px !important;
+
+     width: 100% !important;
+     min-width: 0 !important;
+     max-width: 100% !important;
+
+     height: 190px !important;
+     min-height: 190px !important;
+     max-height: 190px !important;
+
+     overflow-x: scroll !important;
+     overflow-y: hidden !important;
+
+     padding: 6px 4px 14px !important;
+     box-sizing: border-box !important;
+     scrollbar-width: auto !important;
+    }
+
+    /* 檢視模式圖片可能包在 a、div 或 span 裡 */
+    #ragicForm .ragic-field-image .ragic-view-value > a,
+    #ragicForm .ragic-field-image .ragic-view-value > div,
+    #ragicForm .ragic-field-image .ragic-view-value > span,
+    #ragicForm .ragic-field-image .ragic-view-value .image-preview-item {
+     display: block !important;
+     flex: 0 0 260px !important;
+
+     width: 260px !important;
+     min-width: 260px !important;
+     max-width: 260px !important;
+
+     height: 170px !important;
+     min-height: 170px !important;
+     max-height: 170px !important;
+
+     margin: 0 !important;
+     overflow: hidden !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 檢視模式圖片本體 */
+    #ragicForm .ragic-field-image .ragic-view-value img {
+     display: block !important;
+
+     width: 260px !important;
+     min-width: 260px !important;
+     max-width: 260px !important;
+
+     height: 170px !important;
+     min-height: 170px !important;
+     max-height: 170px !important;
+
+     object-fit: contain !important;
+     object-position: center !important;
+
+     margin: 0 !important;
+     padding: 0 !important;
+
+     background: #f3f4f6 !important;
+     border: 1px solid #dbe2ea !important;
+     border-radius: 10px !important;
+     box-sizing: border-box !important;
+    }
+
+    /* 防止圖片或圖片連結被 flex 壓縮 */
+    #ragicForm .ragic-field-image .ragic-view-value img,
+    #ragicForm .ragic-field-image .ragic-view-value a {
+     flex-shrink: 0 !important;
+    }
+
+    /* 橫向捲軸 */
+    #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar {
+     height: 10px !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar-thumb {
+     background: #aeb8c5 !important;
+     border-radius: 999px !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value::-webkit-scrollbar-track {
+     background: #edf1f5 !important;
+     border-radius: 999px !important;
+    }
+
+    /* ===== 日誌 NEW -8：檢視模式圖片加高 ===== */
+
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: 340px !important;
+     min-height: 340px !important;
+     max-height: 340px !important;
+     overflow: hidden !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value {
+     display: flex !important;
+     flex-flow: row nowrap !important;
+     align-items: flex-start !important;
+     gap: 14px !important;
+
+     width: 100% !important;
+     height: 300px !important;
+     min-height: 300px !important;
+     max-height: 300px !important;
+
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+
+     padding: 8px 6px 16px !important;
+     box-sizing: border-box !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value > a,
+    #ragicForm .ragic-field-image .ragic-view-value > div,
+    #ragicForm .ragic-field-image .ragic-view-value > span,
+    #ragicForm .ragic-field-image .ragic-view-value .image-preview-item {
+     flex: 0 0 360px !important;
+
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+
+     overflow: hidden !important;
+    }
+
+    #ragicForm .ragic-field-image .ragic-view-value img {
+     display: block !important;
+
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+
+     object-fit: contain !important;
+     object-position: center !important;
+
+     background: #f3f4f6 !important;
+     border: 1px solid #dbe2ea !important;
+     border-radius: 10px !important;
+     box-sizing: border-box !important;
+    }
+
+    /* ===== 日誌 NEW -9：檢視模式圖片高度強制完整展開 ===== */
+
+    #ragicForm .ragic-field-image.has-form-layout {
+     height: 340px !important;
+     min-height: 340px !important;
+     max-height: none !important;
+     overflow: visible !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout .ragic-view-value {
+     height: 300px !important;
+     min-height: 300px !important;
+     max-height: 300px !important;
+     overflow-x: auto !important;
+     overflow-y: hidden !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout .ragic-view-value > * {
+     flex: 0 0 360px !important;
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout .ragic-view-value img {
+     width: 360px !important;
+     min-width: 360px !important;
+     max-width: 360px !important;
+     height: 270px !important;
+     min-height: 270px !important;
+     max-height: 270px !important;
+     object-fit: contain !important;
+    }
+    /* ===== 日誌 NEW：檔案欄固定高度 ===== */
+    #ragicForm .ragic-field-image.has-form-layout,
+    #ragicForm .ragic-field-file.has-form-layout {
+      height: 175px !important;
+      min-height: 175px !important;
+      max-height: 175px !important;
+      align-self: start !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    #ragicForm .ragic-field-image.has-form-layout > .image-upload-area,
+    #ragicForm .ragic-field-file.has-form-layout > .image-upload-area {
+      height: 150px !important;
+      min-height: 150px !important;
+      max-height: 150px !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    #ragicForm .ragic-field-file.has-form-layout .ragic-file-preview,
+    #ragicForm .ragic-field-file.has-form-layout .ragic-view-value {
+      max-height: 105px !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      box-sizing: border-box !important;
+    }
+
+    /* ===== 日誌 NEW：處理紀錄卡片版面 ===== */
+    #ragicForm [data-subtable="items"] {
+      counter-reset: log-new-record;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row {
+      counter-increment: log-new-record;
+      padding: 14px !important;
+      border: 1px solid #dbe4f0 !important;
+      border-radius: 16px !important;
+      background: #f8fafc !important;
+      box-shadow: 0 3px 12px rgba(15, 23, 42, .05);
+    }
+    #ragicForm [data-subtable="items"] .subtable-row::before {
+      display: none !important;
+      content: none !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-fields {
+      display: grid !important;
+      grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+      grid-template-rows: auto auto auto !important;
+      gap: 12px !important;
+      align-items: stretch !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field {
+      min-width: 0 !important;
+      padding: 10px !important;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) {
+      grid-column: 1 / 9 !important;
+      grid-row: 1 !important;
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) {
+      grid-column: 1 / 5 !important;
+      grid-row: 2 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="ai_analysis"]) {
+      grid-column: 5 / 9 !important;
+      grid-row: 2 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) {
+      grid-column: 1 / 5 !important;
+      grid-row: 3 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="business_processing"]) {
+      grid-column: 5 / 9 !important;
+      grid-row: 3 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="image_source"]) {
+      grid-column: 9 / 11 !important;
+      grid-row: 1 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) {
+      grid-column: 9 / 11 !important;
+      grid-row: 2 !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field-file,
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
+      grid-column: 9 / 11 !important;
+      grid-row: 3 !important;
+      display: block !important;
+      visibility: visible !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="summary"]) textarea {
+      height: 92px !important;
+      min-height: 92px !important;
+      max-height: 92px !important;
+      overflow-y: auto !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation"]) textarea,
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="ai_analysis"]) textarea {
+      height: 220px !important;
+      min-height: 220px !important;
+      max-height: 220px !important;
+      overflow-y: auto !important;
+      line-height: 1.55;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="technical_processing"]) textarea,
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="business_processing"]) textarea {
+      height: 118px !important;
+      min-height: 118px !important;
+      max-height: 118px !important;
+      overflow-y: auto !important;
+    }
+    /* 處理紀錄圖片：外框、上傳區與預覽分開留高，避免圖片被固定 150px 裁切。 */
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_images"]) {
+      height: auto !important;
+      min-height: 280px !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"],
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-upload-area {
+      height: auto !important;
+      min-height: 240px !important;
+      max-height: none !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-preview-list {
+      height: auto !important;
+      min-height: 180px !important;
+      max-height: none !important;
+      align-items: flex-start !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-preview-item {
+      flex: 0 0 220px !important;
+      width: 220px !important;
+      min-width: 220px !important;
+      height: 165px !important;
+      min-height: 165px !important;
+      max-height: 165px !important;
+      overflow: visible !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_images"] .image-preview-item img {
+      width: 220px !important;
+      min-width: 220px !important;
+      max-width: 220px !important;
+      height: 160px !important;
+      min-height: 160px !important;
+      max-height: 160px !important;
+      object-fit: contain !important;
+      object-position: center !important;
+    }
+    #ragicForm [data-subtable="items"] .subtable-row-field-file,
+    #ragicForm [data-subtable="items"] .subtable-row-field:has([data-subfield="conversation_files"]) {
+      min-height: 118px !important;
+      max-height: 150px !important;
+      overflow-y: auto !important;
+    }
+    #ragicForm [data-subtable="items"] [data-subfield-container="conversation_files"] {
+      min-height: 88px !important;
+      max-height: 118px !important;
+      overflow-y: auto !important;
+    }
+    @media (max-width: 980px) {
+      #ragicForm [data-subtable="items"] .subtable-row-fields {
+        grid-template-columns: 1fr !important;
+      }
+      #ragicForm [data-subtable="items"] .subtable-row-field {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+      }
+    }
+    /* 檢視模式：改用卡片網格，讓右側圖片／檔案不再被超寬表格推到畫面外。 */
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] > .ragic-view-subtable-wrap {
+      max-height: none !important;
+      overflow-x: visible !important;
+      overflow-y: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] .ragic-view-subtable {
+      display: block !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      table-layout: auto !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] colgroup,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] thead {
+      display: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody {
+      display: grid !important;
+      gap: 16px;
+      width: 100%;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody > tr {
+      display: grid !important;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      grid-template-rows: auto minmax(230px, auto) minmax(130px, auto);
+      gap: 12px;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #dbe5f1;
+      border-radius: 14px;
+      background: #f8fafc;
+      box-sizing: border-box;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield {
+      display: block !important;
+      width: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: auto !important;
+      padding: 10px !important;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield::before {
+      display: block;
+      margin-bottom: 7px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="summary"] {
+      grid-column: 1 / 9;
+      grid-row: 1;
+      border-color: #bfdbfe !important;
+      background: #eff6ff !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="summary"]::before { content: "總結"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation"] {
+      grid-column: 1 / 5;
+      grid-row: 2;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation"]::before { content: "對話"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="ai_analysis"] {
+      grid-column: 5 / 9;
+      grid-row: 2;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="ai_analysis"]::before { content: "AI分析"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="technical_processing"] {
+      grid-column: 1 / 5;
+      grid-row: 3;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="technical_processing"]::before { content: "技術群處理"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="business_processing"] {
+      grid-column: 5 / 9;
+      grid-row: 3;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="business_processing"]::before { content: "商務群處理"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="image_source"] {
+      grid-column: 9 / 11;
+      grid-row: 1;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="image_source"]::before { content: "圖片來源"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_files"] {
+      grid-column: 9 / 11;
+      grid-row: 3;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_files"]::before { content: "檔案"; }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"]::before {
+      content: "圖片";
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] {
+      grid-column: 9 / 11;
+      grid-row: 2;
+      height: auto !important;
+      min-height: 230px !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] .ragic-view-value {
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="conversation_images"] .ragic-view-image {
+      width: 100% !important;
+      height: auto !important;
+      max-width: 100% !important;
+      max-height: 220px !important;
+      object-fit: contain !important;
+    }
+    @media (max-width: 980px) {
+      .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody > tr {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: none !important;
+      }
+      .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+      }
+    }
+
+
+    /* 日誌 NEW 編輯模式：完整展開處理紀錄卡片，不再塞進 380px 內部捲動框。 */
+    .log-new-page #ragicForm:has(> .ragic-form-grid) [data-subtable="items"] {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm:has(> .ragic-form-grid) [data-subtable="items"] > .ragic-table-wrap {
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    .log-new-page #ragicForm:has(> .ragic-form-grid) [data-subtable="items"] .ragic-subtable {
+      width: 100% !important;
+      table-layout: fixed !important;
+    }
+
+    /* 日誌 NEW 檢視模式：多行文字超出固定高度時，在各欄位內上下捲動。 */
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="summary"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="conversation"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="ai_analysis"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="technical_processing"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="business_processing"] .ragic-view-value {
+      display: block !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="summary"] .ragic-view-value {
+      height: 92px !important;
+      max-height: 92px !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="conversation"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="ai_analysis"] .ragic-view-value {
+      height: 220px !important;
+      max-height: 220px !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="technical_processing"] .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"]
+      [data-subfield-key="business_processing"] .ragic-view-value {
+      height: 118px !important;
+      max-height: 118px !important;
+    }
+
+    /* 日誌 NEW 檢視模式：扁平化欄位，避免卡片與子表格層層套框。 */
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
+      padding: 10px 12px !important;
+      border: 0 !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field .ragic-view-label {
+      color: #64748b !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea .ragic-view-value,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-textarea .field-value {
+      padding: 4px 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+    }
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-image.is-empty-view-field,
+    .log-new-page #ragicForm .compact-view-grid > .ragic-view-field-file.is-empty-view-field {
+      min-height: 58px !important;
+    }
+    @media (min-width: 769px) {
+      .log-new-page #ragicForm .compact-view-grid {
+        grid-auto-flow: row !important;
+      }
+      .log-new-page #ragicForm .compact-view-grid > .ragic-view-field {
+        grid-row: var(--form-row, auto) / span var(--form-rowspan, 1) !important;
+        grid-column: var(--form-col, auto) / span var(--form-colspan, 1) !important;
+      }
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] {
+      margin: 16px 0 0 !important;
+      padding-top: 12px;
+      border: 0 !important;
+      border-top: 1px solid #dbe5f1 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] > .ragic-subtable-head {
+      padding: 0 4px 12px !important;
+      border: 0 !important;
+      background: transparent !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] tbody > tr {
+      gap: 0 18px;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield {
+      padding: 12px 4px !important;
+      border: 0 !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable [data-subfield-key="summary"] {
+      border: 0 !important;
+      border-bottom: 1px solid #bfdbfe !important;
+      background: linear-gradient(90deg, #eff6ff 0%, rgba(239, 246, 255, 0) 100%) !important;
+    }
+    .log-new-page #ragicForm .ragic-view-subtable-section[data-subtable="items"] td.ragic-view-subfield::before {
+      margin-bottom: 6px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    /* 日誌 NEW 檢視：日期時間一律呈現為純文字，避免深色模式出現白色輸入框。 */
+    .log-new-page #ragicForm .ragic-view-field-date .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-datetime .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-createdDate .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-updatedDate .ragic-view-value,
+    .log-new-page #ragicForm .ragic-view-field-reminderTime .ragic-view-value {
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      color: var(--text) !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+
+    /* 日誌 NEW 列表：問題描述完整保留表單換行，依實際行數撐高。 */
+    .log-new-page #ragicListView .ragic-table th[data-field-key="issue"],
+    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"],
+    .log-new-page #ragicListView .ragic-table th:nth-child(7),
+    .log-new-page #ragicListView .ragic-table td:nth-child(7) {
+      white-space: pre-wrap !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      height: auto !important;
+      max-height: none !important;
+      vertical-align: top;
+      line-height: 1.55;
+    }
+    .log-new-page #ragicListView .ragic-table td[data-field-key="issue"] > *,
+    .log-new-page #ragicListView .ragic-table td:nth-child(7) > * {
+      white-space: pre-wrap !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      max-height: none !important;
+    }
+    .log-new-page #ragicListView .ragic-table tbody tr {
+      height: auto !important;
+      max-height: none !important;
+    }
+    .log-new-page #ragicListView .ragic-table td.col-fixed-full-text,
+    .log-new-page #ragicListView .ragic-table td.col-fixed-full-text > * {
+      white-space: pre-wrap !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      overflow-wrap: anywhere !important;
+      word-break: break-word !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+
+
+    /* 日誌 NEW 手機列表：保留手機可讀性，但避免標題、分頁與新增按鈕過度放大。 */
+    @media (max-width: 768px) {
+      .log-new-page #ragicListView {
+        border-radius: 14px !important;
+      }
+
+      .log-new-page #ragicListView .ragic-toolbar {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        gap: 10px 12px !important;
+        padding: 12px !important;
+      }
+
+      .log-new-page #ragicListView .ragic-toolbar > div:first-child {
+        min-width: 0;
+        margin: 0 !important;
+      }
+
+      .log-new-page #ragicListView .ragic-toolbar h2 {
+        font-size: clamp(22px, 6vw, 26px) !important;
+        line-height: 1.2 !important;
+      }
+
+      .log-new-page #ragicListView .ragic-toolbar p {
+        margin-top: 4px !important;
+        font-size: 14px !important;
+        line-height: 1.45 !important;
+      }
+
+      .log-new-page #newRecordButton {
+        grid-column: 2;
+        grid-row: 1;
+        width: auto !important;
+        min-width: 82px !important;
+        min-height: 38px !important;
+        padding: 8px 14px !important;
+        font-size: 14px !important;
+        white-space: nowrap;
+      }
+
+      .log-new-page #ragicPagination {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        padding: 0 !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+        font-size: 13px !important;
+      }
+
+      .log-new-page #ragicPagination .page-size,
+      .log-new-page #ragicPagination .page-nav {
+        display: flex !important;
+        width: auto !important;
+        max-width: none !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        flex-wrap: nowrap !important;
+        gap: 6px !important;
+      }
+
+      .log-new-page #ragicPagination select {
+        min-height: 34px !important;
+        padding: 4px 24px 4px 8px !important;
+        font-size: 13px !important;
+      }
+
+      .log-new-page #ragicPagination button {
+        min-height: 36px !important;
+        padding: 7px 10px !important;
+        font-size: 13px !important;
+        white-space: nowrap;
+      }
+
+      .log-new-page #ragicListView .ragic-table-wrap {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 10px 12px !important;
+      }
+
+      .log-new-page #ragicListView .ragic-table th,
+      .log-new-page #ragicListView .ragic-table td {
+        min-width: 96px !important;
+        padding: 8px 7px !important;
+        font-size: 13px !important;
+        line-height: 1.4 !important;
+      }
+
+      .log-new-page #ragicListView .ragic-table th:first-child,
+      .log-new-page #ragicListView .ragic-table td:first-child {
+        min-width: 68px !important;
+      }
+    }
+
+    @media (max-width: 390px) {
+      .log-new-page #ragicPagination .page-size {
+        display: flex !important;
+      }
+
+      .log-new-page #ragicPagination {
+        font-size: 12px !important;
+      }
+
+      .log-new-page #ragicPagination button {
+        padding-inline: 8px !important;
+      }
+    }
+
+  
+    #ragicForm [data-subtable="items"] .subtable-row.has-ai-verification-warning {
+      outline: 2px solid #f59e0b;
+      outline-offset: 2px;
+    }
+</style>
+</head>
+<body class="log-new-page" data-reminder-module="log_new">
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>日誌 NEW</h1>
+          <p>每日客服作業日誌。</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="secondary" id="designTableButton" type="button">設計表格</button>
+          <div class="user-pill">● 已連線 Firebase</div>
+        </div>
+      </header>
+      <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
+        <div class="ragic-toolbar">
+          <div><h2 id="ragicTitle"></h2><p id="ragicSubtitle"></p></div>
+          <button class="primary" id="newRecordButton" type="button">+ 新增</button>
+        </div>
+        <div class="ragic-table-wrap">
+          <table class="ragic-table">
+            <thead><tr id="ragicHeaderRow"></tr></thead>
+            <tbody id="ragicTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="ragic-card" id="ragicFormView" aria-label="主表單視圖" hidden>
+        <div class="ragic-form-toolbar"><h2></h2><button class="secondary" id="backToListButton" type="button">返回列表</button></div>
+        <form id="ragicForm"></form>
+        <div class="ragic-actions">
+          <button class="ghost danger" id="deleteButton" type="button">刪除</button>
+          <button class="primary" form="ragicForm" type="submit">儲存</button>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- 連動提報浮窗 -->
+  <div class="linked-report-modal" id="linkedReportModal">
+    <div class="linked-report-modal-content">
+      <div class="linked-report-modal-header">
+        <h2>連動提報</h2>
+        <button class="linked-report-modal-close" id="closeLinkedReportModal" type="button">✕</button>
+      </div>
+      <div class="linked-report-form-wrapper">
+        <div class="linked-report-info">
+          提示：下方欄位已自動填入日誌中的相關信息，您可以調整後提交。
+        </div>
+        <div class="linked-report-form-grid" id="linkedReportFormGrid"></div>
+        <div class="linked-report-form-actions">
+          <button class="btn-cancel" id="cancelLinkedReport" type="button">取消</button>
+          <button class="btn-submit" id="submitLinkedReport" type="button">提交提報</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/ragic-table.js?v=20260827-dark-view-fix"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script>
+    // NAS 目前以 HTTP 開啟；非安全來源沒有 crypto.randomUUID，先提供 Puter SDK 相容實作。
+    (() => {
+      if (typeof window.crypto?.randomUUID === 'function') return;
+      const randomUUID = () => {
+        const bytes = new Uint8Array(16);
+        if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+        else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = [...bytes].map((value) => value.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      };
+      try {
+        Object.defineProperty(window.crypto, 'randomUUID', { value: randomUUID, configurable: true });
+      } catch (error) {
+        window.crypto.randomUUID = randomUUID;
+      }
+    })();
+  </script>
+  <script src="https://js.puter.com/v2/"></script>
+  <script>
+    initRagicPage({
+      title: '日誌 NEW',
+      collection: 'workLogsNew',
+      dataCollection: 'log_new',
+      schemaCollection: 'log_new_schema',
+      excludedFieldKeys: ['reportLink'],
+      lockedFieldDefinitions: ['updated_time'],
+      fields: [
+        { key: 'date', label: '日期', type: 'datetime', required: true, defaultNow: true, formRow: 1, formCol: 1 },
+        { key: 'shift', label: '班別', type: 'select', required: true, options: ['早班', '晚班'], formRow: 1, formCol: 2 },
+        { key: 'customer', label: '客戶', type: 'select', required: true, options: [
+          '客服提報',
+          'OKB x OMNIPLAY x CSR Support',
+          'OKB x OP x API Integration Tech Support',
+          'Filbet x OP x 遊戲營運',
+          'Filbet x OP x API Integration Group',
+          'S5 x OP x API by Nextral',
+          'S5.com x OP x API',
+          'Playtime x OMNIPLAY x CSR Support',
+          'Playtime X OMNIPLAY X API',
+          'OMNIPLAY X Digiplus Integration(BP)',
+          'Omniplay X Digiplus 客服(BP)',
+          'DF-OP 菲律宾合规API 介接群',
+          'DF X OMNIPLAY X 客服',
+          'OCMS X OMNIPLAY ( 技術群 ）',
+          'CFO x OP x 技術服務群',
+          '新客戶',
+          'CasinoPlus x OMNIPLAY x Integration Group',
+          'Solaire x OMNIPLAY (OP)x API Group',
+          'Digitalwin x OMNIPLAY x API Group',
+          'Luckyworld x OMNIPLAY x API group',
+          'OKFUN x GSPH x OP x Tech Support',
+          'Juan 365 x Omnipaly x API Group',
+          'IGO-NP x OMNIPLAY x API Group',
+          'Okada x OMNIPLAY x API Group',
+          'NuStar X OMNIPLAY X API',
+          'PW-OKADAPLAY X OP X API',
+          'Pin77 X OMNIPLAY X API',
+          'PWNWR X OMNIPLAY X API',
+          'Hann X OMNIPLAY X API',
+          'YOYO X OMNIPLAY X API',
+          'PWAP X OMNIPLAY X API',
+          'PWBB X OMNIPLAY X API',
+          'VIVO X OMNIPLAY X API',
+          'PWNN X OMNIPLAY X API',
+          'LORA X OMNIPLAY X API',
+          'RWN2 X OMNIPLAY X API',
+          'FBM X OMNIPLAY X API'
+        ], formRow: 1, formCol: 3 },
+        { key: 'status', label: '狀態', type: 'select', required: true, options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], formRow: 1, formCol: 4 },
+        { key: 'category', label: '分類', type: 'select', required: true, options: [
+          '需求', '資訊', '加白', '客訴', '卡單', '注單確認',
+          '前端 (技術)', '後端 (技術)', '對接 (問題)', '帳務 (問題)',
+          '遊戲 (問題)', '後台 (問題)', '待定(請勿濫用)'
+        ], formRow: 2, formCol: 1 },
+        { key: 'contact', label: '接洽者', type: 'select', required: true, defaultCurrentUser: true, options: [
+          '佳臻', '晴心', '澄希', '茗雅',
+          '------',
+          '中魁', 'Rondo', '技術／IT', '商務／AM', '行銷／PM', 'PAGCOR驗證', '營銷',
+          '------',
+          '于慧', '芯瑜', '志忠'
+        ], formRow: 2, formCol: 2 },
+        { key: 'completed_by', label: '完成者', type: 'select', options: [
+          '佳臻', '晴心', '澄希', '茗雅',
+          '------',
+          '中魁', 'Rondo', '技術／IT', '商務／AM', '行銷／PM', 'PAGCOR驗證', '營銷',
+          '------',
+          '于慧', '芯瑜', '志忠'
+        ], formRow: 2, formCol: 3 },
+        { key: 'completed_at', label: '完成時間', type: 'datetime', formRow: 2, formCol: 4 },
+        { key: 'updated_time', label: '更新時間', type: 'updatedDate', formRow: 3, formCol: 1 },
+        { key: 'images', label: '圖片', type: 'image', formRow: 3, formCol: 2 },
+        { key: 'files', label: '檔案', type: 'file', formRow: 3, formCol: 3 },
+        { key: 'serial', label: '編號', type: 'serial', formRow: 3, formCol: 4 },
+        { key: 'issue', label: '問題描述', type: 'textarea', rows: 6, required: true, formRow: 4, formCol: 1, formColSpan: 2 },
+        { key: 'note', label: '備註', type: 'textarea', rows: 6, placeholder: '未完成時，請填入詢問部門的日期時間', formRow: 4, formCol: 3, formColSpan: 2 },
+        { key: 'linked_report', label: '提報', type: 'checkbox', formRow: 5, formCol: 1, formColSpan: 1 },
+        { key: 'reminder_at', label: '提醒時間', type: 'datetime', formRow: 5, formCol: 2 },
+        { key: 'reminder_enabled', label: '啟用提醒', type: 'checkbox', formRow: 5, formCol: 3 },
+        { key: 'processing_department', label: '處理部門', type: 'select', options: ['技術', '商務'], formRow: 5, formCol: 4 },
+        { key: 'reminder_link', label: '提醒連結', type: 'link', formRow: 2, formCol: 7 },
+        { key: 'items', label: '處理紀錄（子表格）', type: 'subtable', columnsPerRow: 5, formRow: 7, formCol: 1, formColSpan: 7, fields: [
+          { key: 'conversation', label: '對話', type: 'textarea', rows: 8, width: 420, placeholder: '請貼上客戶與客服的完整對話' },
+          { key: 'technical_processing', label: '技術群處理', type: 'textarea', rows: 4, width: 300 },
+          { key: 'ai_analysis', label: 'AI分析', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
+          { key: 'summary', label: '總結', type: 'textarea', rows: 8, width: 420, placeholder: '連接 AI 後自動填入' },
+          { key: 'image_source', label: '圖片來源', type: 'select', width: 420, defaultValue: '自動判斷', options: ['自動判斷', '客戶', '我方團隊'] },
+          { key: 'business_processing', label: '商務群處理', type: 'textarea', rows: 4, width: 300 },
+          { key: 'conversation_images', label: '圖片', type: 'image', width: 420 },
+          { key: 'conversation_files', label: '檔案', type: 'file', width: 420 }
+        ]}
+      ],
+      formLayout: {
+        version: 'log-new-layout-20260719-2',
+        columns: 7,
+        rows: 9,
+        fields: {
+          date: { row: 1, col: 1 },
+          shift: { row: 1, col: 2 },
+          customer: { row: 1, col: 3 },
+          status: { row: 1, col: 4 },
+          updated_time: { row: 1, col: 5 },
+          reminder_enabled: { row: 1, col: 6 },
+          linked_report: { row: 1, col: 7 },
+          category: { row: 2, col: 1 },
+          contact: { row: 2, col: 2 },
+          completed_by: { row: 2, col: 3 },
+          completed_at: { row: 2, col: 4 },
+          serial: { row: 2, col: 5 },
+          reminder_at: { row: 2, col: 6 },
+          reminder_link: { row: 2, col: 7 },
+          images: { row: 3, col: 1, colSpan: 4, height: 116 },
+          files: { row: 3, col: 5, colSpan: 3, height: 116 },
+          issue: { row: 4, col: 1, colSpan: 3, rowSpan: 2, height: 220 },
+          note: { row: 4, col: 4, colSpan: 3, rowSpan: 2, height: 220 },
+          processing_department: { row: 4, col: 7 },
+          items: { row: 7, col: 1, colSpan: 7, height: 360 }
+        }
+      },
+      fullTextListFields: ['issue'],
+      fixedSortKey: 'date',
+      fixedSortDir: 'desc',
+      listColumns: ['date', 'shift', 'customer', 'category', 'status', 'issue', 'contact', 'completed_by', 'completed_at', 'linked_report', 'updated_time', 'serial']
+    });
+
+    // 既有提報以 sourceLogId 對回原日誌，同步顯示提報狀態與提報連結。
+    window.omniplayDb?.collection('report')?.onSnapshot((snapshot) => {
+      window.ragicLinkedReports = new Map(
+        snapshot.docs
+          .map((doc) => {
+            const sourceLogId = String(doc.data()?.sourceLogId || '').trim();
+            const url = new URL(`report.html?id=${encodeURIComponent(doc.id)}`, window.location.href).href;
+            return sourceLogId ? [sourceLogId, { id: doc.id, url }] : null;
+          })
+          .filter(Boolean)
+      );
+      window.refreshRagicDisplay?.();
+    }, (error) => console.warn('讀取提報連動狀態失敗：', error));
+
+    // 連動提報功能
+    window.linkedReportManager = {
+      currentLogData: null,
+      
+      openModal: function(logRecord) {
+        this.currentLogData = logRecord;
+        const modal = document.getElementById('linkedReportModal');
+        
+        // 構建提報表單
+        this.renderReportForm(logRecord);
+        
+        modal.classList.add('show');
+      },
+      
+      closeModal: function() {
+        const modal = document.getElementById('linkedReportModal');
+        modal.classList.remove('show');
+        this.currentLogData = null;
+        document.getElementById('linkedReportFormGrid').innerHTML = '';
+      },
+      
+      renderReportForm: function(logRecord) {
+        const grid = document.getElementById('linkedReportFormGrid');
+        const sourceDepartment = document.querySelector('#ragicForm [name="processing_department"]')?.value || logRecord.processing_department || '';
+        
+        // 構建提報表單的字段（對應 report.html 中的字段）
+        const reportFields = [
+          { key: 'date', label: '日期', type: 'date', value: String(logRecord.date || '').slice(0, 10) },
+          { key: 'reporter', label: '班別', type: 'text', value: logRecord.shift || '' },
+          { key: 'category', label: '部門（由日誌處理部門帶入）', type: 'select', value: sourceDepartment, options: ['技術', '商務'], locked: true },
+          { key: 'subject', label: '分類', type: 'text', value: logRecord.category || '' },
+          { key: 'content', label: '級數', type: 'select', value: '', options: ['一級', '二級', '三級'] },
+          { key: 'field_1783792645702_pi66u', label: '客戶（由日誌帶入，不可變更）', type: 'text', value: logRecord.customer || '', locked: true },
+          { key: 'status', label: '狀態（由日誌帶入）', type: 'select', value: logRecord.status || '', options: ['待辦中', '處理中', '觀察中', '已完成', '追"客"', '無須追蹤'], locked: true },
+          { key: 'field_1783793487601_dbb5n', label: '提報者', type: 'select', value: sessionStorage.getItem('omniplayStaffName') || logRecord.contact || '', options: ['佳臻', '晴心', '澄希', '茗雅', '中魁', 'Rondo', '于慧', '芯瑜', '志忠'] },
+          { key: 'field_1783793471256_rn925', label: '日誌連結', type: 'text', value: window.location.href, locked: true },
+          { key: 'issue', label: '問題描述', type: 'textarea', value: logRecord.issue || '' },
+        ];
+        
+        let formHtml = '';
+        
+        reportFields.forEach(field => {
+          let controlHtml = '';
+          
+          if (field.type === 'date') {
+            controlHtml = `<input type="date" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}">`;
+          } else if (field.type === 'select') {
+            controlHtml = `<select data-field-key="${field.key}" ${field.locked ? 'disabled' : ''}>
+              <option value="">請選擇</option>
+              ${field.options.map(opt => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+            </select>`;
+          } else if (field.type === 'textarea') {
+            controlHtml = `<textarea rows="4" data-field-key="${field.key}">${this.escapeHtml(field.value)}</textarea>`;
+          } else {
+            controlHtml = `<input type="text" value="${this.escapeHtml(field.value)}" data-field-key="${field.key}" ${field.locked ? 'readonly' : ''}>`;
+          }
+          
+          formHtml += `
+            <div class="linked-report-form-field">
+              <label>${field.label}</label>
+              ${controlHtml}
+            </div>
+          `;
+        });
+        
+        grid.innerHTML = formHtml;
+      },
+      
+      submitReport: function() {
+        const grid = document.getElementById('linkedReportFormGrid');
+        const formData = {};
+        const sourceCustomer = String(this.currentLogData?.customer || '').trim();
+
+        if (!sourceCustomer) {
+          window.showRagicNotice?.('日誌的「客戶」尚未填寫，請先回日誌填寫後再連動提報。', { tone: 'error', duration: 5000 });
+          return;
+        }
+        
+        grid.querySelectorAll('[data-field-key]').forEach(field => {
+          formData[field.dataset.fieldKey] = field.value;
+        });
+        // 客戶只能使用來源日誌的值，不能接受浮窗或 DOM 中被修改的內容。
+        formData.field_1783792645702_pi66u = sourceCustomer;
+        
+        // 取得 Firebase collection
+        const reportCollection = window.omniplayDb?.collection('report');
+        if (!reportCollection) {
+          alert('Firebase 未初始化，請稍後再試');
+          return;
+        }
+        
+        // 新增提報記錄
+        const sourceLogId = window.getCurrentRagicRecordId?.() || '';
+        const sourceLogUrl = sourceLogId ? `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(sourceLogId)}` : window.location.href;
+        reportCollection.add({
+          ...formData,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          sourceLogId,
+          sourceLogUrl,
+          field_1783793471256_rn925: sourceLogUrl
+        }).then(async (reportRef) => {
+          const reportUrl = new URL(`report.html?id=${encodeURIComponent(reportRef.id)}`, window.location.href).href;
+          if (sourceLogId) {
+            try {
+              await window.omniplayDb.collection('log_new').doc(sourceLogId).update({
+                linked_report: true,
+                report_enabled: true,
+                reportEnabled: true,
+                report_link: reportUrl,
+                reportLink: reportUrl
+              });
+            } catch (error) {
+              console.warn('提報已建立，但回寫日誌提報狀態與連結失敗：', error);
+            }
+          }
+          window.showRagicNotice?.('提報已成功提交！');
+          this.closeModal();
+        }).catch(error => {
+          console.error('提報失敗：', error);
+          window.showRagicNotice?.('提報失敗，請稍後再試', { tone: 'error', duration: 4500 });
+        });
+      },
+      
+      escapeHtml: function(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    };
+
+    // 在表單加載完成後，為連動提報勾選框添加事件
+    const observeCheckboxChange = () => {
+      const linkedReportCheckbox = document.querySelector('[name="linked_report"]');
+      if (linkedReportCheckbox && !linkedReportCheckbox.dataset.listenerBound) {
+        linkedReportCheckbox.dataset.listenerBound = 'true';
+        linkedReportCheckbox.addEventListener('change', function() {
+          if (this.checked) {
+            const departmentControl = document.querySelector('#ragicForm [name="processing_department"]');
+            if (!departmentControl?.value) {
+              alert('請先選擇日誌表單的「處理部門」，再建立連動提報。');
+              this.checked = false;
+              departmentControl?.focus();
+              return;
+            }
+            const customerControl = document.querySelector('#ragicForm [name="customer"]');
+            if (!String(customerControl?.value || '').trim()) {
+              alert('請先填寫日誌表單的「客戶」，再建立連動提報。');
+              this.checked = false;
+              customerControl?.focus();
+              return;
+            }
+            if (!window.getCurrentRagicRecordId?.()) {
+              window.pendingLinkedReportAfterSave = true;
+              this.checked = false;
+              document.querySelector('#ragicForm')?.requestSubmit();
+              return;
+            }
+            // 取得當前表單的記錄數據
+            const formFields = document.querySelectorAll('#ragicForm [name]');
+            const currentLogData = {};
+            
+            formFields.forEach(field => {
+              if (field.name && field.name !== 'linked_report') {
+                currentLogData[field.name] = field.value;
+              }
+            });
+            
+            window.linkedReportManager.openModal(currentLogData);
+            // 勾選後自動取消勾選狀態
+            this.checked = false;
+          }
+        });
+      }
+    };
+
+    // 監控 DOM 變化，當表單被渲染時添加事件
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('#ragicFormView:not([hidden]) #ragicForm')) {
+        observeCheckboxChange();
+      }
+    });
+
+    observer.observe(document.querySelector('#ragicFormView'), {
+      childList: true,
+      subtree: true
+    });
+
+    // 初始檢查
+    observeCheckboxChange();
+
+    // 浮窗關閉按鈕事件
+    document.getElementById('closeLinkedReportModal').addEventListener('click', () => {
+      window.linkedReportManager.closeModal();
+    });
+
+    document.getElementById('cancelLinkedReport').addEventListener('click', () => {
+      window.linkedReportManager.closeModal();
+    });
+
+    document.getElementById('submitLinkedReport').addEventListener('click', () => {
+      window.linkedReportManager.submitReport();
+    });
+
+    // 點擊浮窗背景也可以關閉
+    document.getElementById('linkedReportModal').addEventListener('click', (e) => {
+      if (e.target.id === 'linkedReportModal') {
+        window.linkedReportManager.closeModal();
+      }
+    });
+  </script>
+  <script>
+    // 日誌 NEW 免費 AI 試用：使用 Puter.js，不在公開網站保存 API 金鑰。
+    const normalizeLogNewAiAnalysis = (value = '') => {
+      const raw = String(value).replace(/\r\n?/g, '\n').trim();
+      const allTitles = ['客戶問題', '客戶圖片', '內部處理', '我方圖片', '問題判斷', '目前進度', '後續待辦'];
+      const parts = {};
+      allTitles.forEach((title) => {
+        const next = allTitles.filter((item) => item !== title).join('|');
+        const match = raw.match(new RegExp(`【${title}】\\s*([\\s\\S]*?)(?=【(?:${next})】|$)`));
+        parts[title] = match?.[1]?.trim() || '';
+      });
+      if (parts['客戶圖片']) parts['客戶問題'] = [parts['客戶問題'], `圖片重點：${parts['客戶圖片']}`].filter(Boolean).join('\n');
+      if (parts['我方圖片']) parts['內部處理'] = [parts['內部處理'], `圖片結果：${parts['我方圖片']}`].filter(Boolean).join('\n');
+      if (!allTitles.some((title) => parts[title])) parts['問題判斷'] = raw;
+      return ['客戶問題', '內部處理', '問題判斷', '目前進度', '後續待辦']
+        .map((title) => `【${title}】\n${parts[title] || '對話或圖片未提供'}`)
+        .join('\n\n');
+    };
+
+    const logNewCriticalValues = (value = '') => [...new Set(
+      (String(value).match(/\b(?:[A-Za-z]{1,8}[-_])?\d[\dA-Za-z_-]{3,}\b|(?:NT\$|US\$|\$)\s*\d[\d,.]*/gi) || [])
+        .map((token) => token.toLowerCase().replace(/[\s,]/g, ''))
+    )];
+    const validateLogNewAiResult = ({ raw = '', result = {}, source = '', hasImages = false } = {}) => {
+      const warnings = [];
+      const requiredMarkers = ['<<<ANALYSIS>>>', '<<<SUMMARY>>>', '<<<CUSTOMER_BRIEF>>>', '<<<SUPPORT_BRIEF>>>', '<<<END>>>'];
+      if (!requiredMarkers.every((marker) => raw.includes(marker))) warnings.push('AI 回傳格式不完整，請核對各欄位');
+      const outputText = [result.analysis, result.summary, result.customerBrief, result.supportBrief].filter(Boolean).join('\n');
+      const sourceValues = new Set(logNewCriticalValues(source));
+      const unexpectedValues = logNewCriticalValues(outputText).filter((token) => !sourceValues.has(token));
+      if (unexpectedValues.length) warnings.push(`AI 出現原始內容沒有的編號／金額：${unexpectedValues.slice(0, 8).join('、')}`);
+      if (hasImages) warnings.push('圖片中的玩家 ID、注單號、日期與金額仍需對照原圖確認');
+      if (!String(result.analysis || '').trim() || !String(result.summary || '').trim()) warnings.push('AI 分析或總結為空白');
+      return warnings;
+    };
+    const appendLogNewAiWarnings = (analysis = '', warnings = []) => {
+      if (!warnings.length) return analysis;
+      return `${String(analysis || '').trim()}\n\n【系統核對】\n${warnings.map((warning) => `・${warning}`).join('\n')}`.trim();
+    };
+
+    window.applyLogNewAiResult = (row, result = {}) => {
+      if (!row) return;
+      const analysis = row.querySelector('[data-subfield="ai_analysis"]');
+      const summary = row.querySelector('[data-subfield="summary"]');
+      const issue = document.querySelector('#ragicForm [name="issue"]');
+      if (analysis) analysis.value = normalizeLogNewAiAnalysis(result.analysis || '');
+      if (summary) summary.value = result.summary || '';
+      if (issue) issue.value = `客戶：${result.customerBrief || ''}\n客服：${result.supportBrief || ''}`;
+    };
+
+    // 將聊天軟體匯出的「[日期 上午/下午 時間] 人員: 內容」自動整理成易讀格式。
+    const normalizeLogNewConversation = (value = '') => {
+      const text = String(value).replace(/\r\n?/g, '\n').trim();
+      const headerPattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*[^\n:：]{1,120}?[:：]/g;
+      const entries = [];
+      let match;
+      while ((match = headerPattern.exec(text))) entries.push({ match: [...match], index: match.index, end: headerPattern.lastIndex, header: match[0].trim() });
+      if (!entries.length) return text;
+      entries.forEach((entry, index) => {
+        const nextIndex = entries[index + 1]?.index ?? text.length;
+        entry.content = text.slice(entry.end, nextIndex).replace(/\n*\s*-{6,}\s*$/g, '').trim();
+      });
+      const hour24 = (entry) => {
+        let hour = Number(entry.match[5]);
+        const period = String(entry.match[4]).toLowerCase();
+        if ((period === '下午' || period === 'pm') && hour < 12) hour += 12;
+        if ((period === '上午' || period === 'am') && hour === 12) hour = 0;
+        return hour;
+      };
+      const dateNumber = (entry) => Date.UTC(Number(entry.match[1]), Number(entry.match[2]) - 1, Number(entry.match[3]));
+      const isNightShiftContinuation = (previous, current) => dateNumber(current) - dateNumber(previous) === 86400000 && hour24(previous) >= 20 && hour24(current) < 8;
+      return entries.map((entry, index) => {
+        const body = `${entry.header}${entry.content ? `\n${entry.content}` : ''}`;
+        if (!index) return body;
+        const previous = entries[index - 1];
+        const crossedDate = dateNumber(previous) !== dateNumber(entry);
+        return `${crossedDate && !isNightShiftContinuation(previous, entry) ? '------\n\n' : ''}${body}`;
+      }).join('\n\n');
+    };
+
+    const syncLogNewDateFromConversation = (value = '') => {
+      const match = String(value).match(/^\s*\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]/);
+      if (!match) return;
+      let hour = Number(match[5]);
+      const period = match[4].toLowerCase();
+      if ((period === '下午' || period === 'pm') && hour < 12) hour += 12;
+      if ((period === '上午' || period === 'am') && hour === 12) hour = 0;
+      const pad = (number) => String(number).padStart(2, '0');
+      const control = document.querySelector('#ragicForm [name="date"]');
+      if (!control) return;
+      control.value = `${match[1]}-${pad(match[2])}-${pad(match[3])}T${pad(hour)}:${match[6]}`;
+      control.dispatchEvent(new Event('input', { bubbles: true }));
+      control.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    let logNewStaffCache = null;
+    const loadLogNewStaff = async () => {
+      if (Array.isArray(logNewStaffCache)) return logNewStaffCache;
+      const snapshot = await window.omniplayDb.collection('staff').get();
+      logNewStaffCache = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      return logNewStaffCache;
+    };
+
+    const logNewDateTimeFromMatch = (match) => {
+      let hour = Number(match[5]);
+      const period = String(match[4]).toLowerCase();
+      if ((period === '下午' || period === 'pm') && hour < 12) hour += 12;
+      if ((period === '上午' || period === 'am') && hour === 12) hour = 0;
+      const pad = (number) => String(number).padStart(2, '0');
+      return `${match[1]}-${pad(match[2])}-${pad(match[3])}T${pad(hour)}:${match[6]}`;
+    };
+
+    const lastLogNewConversationEntry = () => {
+      let last = null;
+      document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
+        const text = textarea.value || '';
+        logNewConversationEntries(text).forEach((entry) => {
+          if (isLogNewInternalSpeaker(entry.speaker)) last = { ...entry, text };
+        });
+      });
+      return last;
+    };
+
+    const normalizeStaffIdentity = (value = '') => String(value).toLowerCase()
+      .replace(/[\p{Extended_Pictographic}\u200d\ufe0f]/gu, '')
+      .replace(/[_\-\s／/]+/g, ' ')
+      .trim();
+
+    // OMNIPLAY 團隊名單是 AI、人員判斷、接洽者與完成者共用的唯一來源。
+    const LOG_NEW_TEAM_DIRECTORY = [
+      { department: '客服', names: ['igaming-op', '中魁（客服組長）'] },
+      { department: '商務', names: ['Jerry Hu', 'Andy Chou', 'Jim Li', 'Lucas', 'Lucas N', 'J_商務', 'Anton'] },
+      { department: 'PM', names: ['Hazel'] },
+      { department: 'AM', names: ['PC_AM', 'Cia_OP-AM', 'Weiliya Lin', 'Weiliya_OP-AM', 'Apple_AM'] },
+      { department: '行銷', names: ['Diane'] },
+      { department: '營銷', names: ['KKaren'] },
+      { department: 'PAGCOR驗證', names: ['crystal'] },
+      { department: '技術／RD', names: ['Rondo', 'Rondo lin OP-RD', 'Leo Chang', 'Chuan-Chia Lai', '賢 _RD', 'Nick OP RD', 'Yeh Ryan'] },
+      { department: 'IT', names: ['Nina', '張家豪', 'YuTing Wang', 'WJ', 'Chang How', 'WeiLi Huang', 'Ellie', 'Mike Yu', '修全 林', '多_IT-SRE', 'Tony Yang', 'Andrew', 'Pien', 'Suigetsu'] }
+    ];
+    const logNewTeamDirectoryText = LOG_NEW_TEAM_DIRECTORY
+      .map((group) => `${group.department}：${group.names.join('；')}`)
+      .join('\n');
+    const logNewTeamAliases = LOG_NEW_TEAM_DIRECTORY
+      .flatMap((group) => group.names)
+      .map(normalizeStaffIdentity)
+      .flatMap((name) => {
+        const withoutTitle = name.replace(/\s*[（(].*?[）)]\s*/g, '').trim();
+        return withoutTitle && withoutTitle !== name ? [name, withoutTitle] : [name];
+      });
+
+    const isLogNewInternalSpeaker = (speakerValue = '') => {
+      const speaker = normalizeStaffIdentity(speakerValue);
+      return logNewTeamAliases.some((alias) => speaker === alias || (alias.length >= 3 && speaker.includes(alias)));
+    };
+
+    const logNewSpeakerDepartment = (speakerValue = '') => {
+      const speaker = normalizeStaffIdentity(speakerValue);
+      if (speaker === 'j') return '商務';
+      const group = LOG_NEW_TEAM_DIRECTORY.find((item) => item.names.some((name) => {
+        const alias = normalizeStaffIdentity(name).replace(/\s*[（(].*?[）)]\s*/g, '').trim();
+        return speaker === alias || (alias.length >= 3 && speaker.includes(alias));
+      }));
+      if (!group) return '';
+      return group.department === '技術／RD' ? '技術' : group.department;
+    };
+
+    const logNewConversationEntries = (value = '') => {
+      const text = String(value);
+      const pattern = /\[(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(上午|下午|AM|PM|am|pm)\s+(\d{1,2}):(\d{2})(?::\d{2})?\]\s*([^\n:：]{1,120})[:：]/g;
+      const entries = [];
+      let match;
+      while ((match = pattern.exec(text))) entries.push({ match: [...match], speaker: match[7].trim(), index: match.index, end: pattern.lastIndex });
+      entries.forEach((entry, index) => { entry.segment = text.slice(entry.end, entries[index + 1]?.index ?? text.length); });
+      return entries;
+    };
+
+    const syncLogNewContactFromConversation = async (value = '') => {
+      const entries = logNewConversationEntries(value);
+      if (entries.length < 2) return;
+      // 接洽者是對話中第一位 OMNIPLAY 回覆者；第一段本身也可能是我方轉貼內容。
+      const responder = entries.find((entry) => {
+        const identity = normalizeStaffIdentity(entry.speaker);
+        return identity === 'j 商務' || identity === 'j' || identity.includes('igaming op') || isLogNewInternalSpeaker(entry.speaker);
+      });
+      if (!responder) return;
+      const speaker = normalizeStaffIdentity(responder.speaker);
+      const contact = document.querySelector('#ragicForm [name="contact"]');
+      if (speaker === 'j 商務' || speaker === 'j') {
+        setLogNewSelectValue(contact, '商務／AM');
+        return;
+      }
+      const staff = await loadLogNewStaff();
+      if (speaker.includes('igaming op')) {
+        const codes = [...responder.segment.matchAll(/(?:^|[\s。.!！])[-－]\s*([a-z0-9]{1,10})(?=\s|$|[。.!！])/gi)].map((match) => match[1]);
+        for (const code of [...codes].reverse()) {
+          const person = staff.find((item) => String(item.code || '').trim().toLowerCase() === code.toLowerCase());
+          if (person?.name) {
+            setLogNewSelectValue(contact, person.name);
+            return;
+          }
+        }
+        return;
+      }
+      const resolved = await resolveLogNewCompleter(responder);
+      if (resolved.name) setLogNewSelectValue(contact, resolved.name);
+    };
+
+    const resolveLogNewCompleter = async (entry) => {
+      const staff = await loadLogNewStaff();
+      const speaker = normalizeStaffIdentity(entry.speaker);
+      if (speaker.includes('igaming op')) {
+        const codes = [...entry.segment.matchAll(/(?:^|[\s。.!！])[-－]\s*([a-z0-9]{1,10})(?=\s|$|[。.!！])/gi)].map((match) => match[1]);
+        if (!codes.length) return { name: '', reason: '最後一段是 igaming-op，但回覆內容沒有「-人員編號」' };
+        for (const code of [...codes].reverse()) {
+          const person = staff.find((item) => String(item.code || '').trim().toLowerCase() === code.toLowerCase());
+          if (person?.name) return { name: person.name, reason: '' };
+        }
+        return { name: '', reason: `人員管理找不到編號 ${codes.join('、')}` };
+      }
+      const person = staff.find((item) => {
+        const identities = [item.name, item.account, item.code].map(normalizeStaffIdentity).filter((value) => value.length >= 2);
+        return identities.some((identity) => speaker === identity || speaker.includes(identity) || identity.includes(speaker));
+      });
+      if (person?.name) return { name: person.name, reason: '' };
+      const alias = logNewTeamAliases.find((name) => speaker.includes(name));
+      return alias ? { name: entry.speaker.replace(/[_-](?:商務|am|pm|rd|it|sre|dba).*$/i, '').trim(), reason: '' } : { name: '', reason: `無法將最後發言者「${entry.speaker}」對應到人員管理` };
+    };
+
+    const setLogNewSelectValue = (select, value) => {
+      if (!select || !value) return;
+      if (![...select.options].some((option) => option.value === value)) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+      select.value = value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    const fillLogNewCompletionFields = async ({ notify = true } = {}) => {
+      const entry = lastLogNewConversationEntry();
+      if (!entry) {
+        if (notify) alert('找不到對話日期時間，請確認最後一段以 [年/月/日 上午/下午 時:分] 開頭。');
+        return false;
+      }
+      const completedAt = document.querySelector('#ragicForm [name="completed_at"]');
+      if (completedAt) {
+        completedAt.value = logNewDateTimeFromMatch(entry.match);
+        completedAt.dispatchEvent(new Event('input', { bubbles: true }));
+        completedAt.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      try {
+        const resolved = await resolveLogNewCompleter(entry);
+        if (resolved.name) {
+          setLogNewSelectValue(document.querySelector('#ragicForm [name="completed_by"]'), resolved.name);
+          return true;
+        }
+        if (notify) alert(`完成時間已自動填入，但完成者無法判斷：${resolved.reason}`);
+      } catch (error) {
+        if (notify) alert(`完成時間已自動填入，但讀取人員管理失敗：${error?.message || '請確認權限'}`);
+      }
+      return false;
+    };
+
+    const bindLogNewCompletionAutoFill = () => {
+      const status = document.querySelector('#ragicForm [name="status"]');
+      if (!status || status.dataset.logNewCompletionBound) return;
+      status.dataset.logNewCompletionBound = 'true';
+      status.addEventListener('change', async () => {
+        if (status.value === '已完成') await fillLogNewCompletionFields();
+      });
+    };
+
+    // 一次性整理已儲存的日誌 NEW 對話；只更新有格式差異的 items 欄位。
+    const migrateSavedLogNewConversations = async () => {
+      const migrationKey = 'logNewConversationFormat:20260719-2';
+      if (sessionStorage.getItem(migrationKey)) return;
+      for (let attempt = 0; attempt < 20 && !window.omniplayDb; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      if (!window.omniplayDb) return;
+      try {
+        const snapshot = await window.omniplayDb.collection('log_new').get();
+        const changes = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data() || {};
+          if (!Array.isArray(data.items)) return;
+          const items = data.items.map((item) => {
+            if (!item || typeof item !== 'object' || typeof item.conversation !== 'string') return item;
+            return { ...item, conversation: normalizeLogNewConversation(item.conversation) };
+          });
+          if (JSON.stringify(items) !== JSON.stringify(data.items)) changes.push({ ref: doc.ref, items });
+        });
+        for (let start = 0; start < changes.length; start += 400) {
+          const batch = window.omniplayDb.batch();
+          changes.slice(start, start + 400).forEach(({ ref, items }) => batch.update(ref, { items }));
+          await batch.commit();
+        }
+        sessionStorage.setItem(migrationKey, 'done');
+        if (changes.length) alert(`已自動整理 ${changes.length} 筆日誌 NEW 的舊對話格式。`);
+      } catch (error) {
+        console.error('整理已儲存的日誌 NEW 對話失敗：', error);
+        alert(`舊對話批次整理失敗：${error?.message || '請確認 Firebase 權限後再試'}`);
+      }
+    };
+
+    const bindConversationAutoFormat = () => {
+      document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
+        if (textarea.dataset.conversationFormatBound) return;
+        textarea.dataset.conversationFormatBound = 'true';
+        const format = () => {
+          const formatted = normalizeLogNewConversation(textarea.value);
+          syncLogNewDateFromConversation(formatted);
+          syncLogNewContactFromConversation(formatted).catch((error) => console.warn('自動判斷接洽者失敗：', error));
+          if (formatted === textarea.value) return;
+          textarea.value = formatted;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        let contactTimer;
+        textarea.addEventListener('input', () => {
+          clearTimeout(contactTimer);
+          contactTimer = setTimeout(() => {
+            syncLogNewContactFromConversation(textarea.value).catch((error) => console.warn('自動判斷接洽者失敗：', error));
+          }, 120);
+        });
+        textarea.addEventListener('paste', () => setTimeout(format, 0));
+        textarea.addEventListener('blur', format);
+        if (textarea.value) syncLogNewContactFromConversation(textarea.value).catch((error) => console.warn('自動判斷接洽者失敗：', error));
+      });
+    };
+
+    document.querySelector('#ragicForm')?.addEventListener('submit', () => {
+      const conversations = [...document.querySelectorAll('#ragicForm [data-subfield="conversation"]')]
+        .map((textarea) => textarea.value || '')
+        .filter(Boolean)
+        .join('\n');
+      syncLogNewContactFromConversation(conversations).catch((error) => console.warn('儲存前同步接洽者失敗：', error));
+    }, true);
+
+    const bindLogNewConversationImages = () => {
+      document.querySelectorAll('#ragicForm [data-subfield-container="conversation_images"]').forEach((area) => {
+        if (area.dataset.logNewImageBound) return;
+        area.dataset.logNewImageBound = 'true';
+        const input = area.querySelector('[data-subfield="conversation_images"]');
+        const process = async (files) => {
+          if (!files.length) return;
+          try {
+            let current = [];
+            try { current = JSON.parse(input.dataset.imageValue || '[]'); } catch (_) { current = []; }
+            const added = [];
+            for (const file of files) {
+              const clearPending = window.showRagicPendingImage?.(file, area, '對話圖片') || (() => {});
+              try {
+                added.push(await window.uploadRagicImageFile(file));
+              } finally {
+                clearPending();
+              }
+            }
+            const images = [...(Array.isArray(current) ? current : []), ...added];
+            showImagePreview(images, area, '對話圖片');
+          } catch (error) {
+            alert(`對話圖片上傳失敗：${error?.message || '請改用 JPG 或 PNG 圖片'}`);
+          } finally {
+            input.value = '';
+          }
+        };
+        input?.addEventListener('change', (event) => {
+          event.stopImmediatePropagation();
+          process([...(input.files || [])]);
+        }, true);
+        area.addEventListener('paste', (event) => {
+          const files = [...(event.clipboardData?.items || [])].filter((item) => item.kind === 'file' && item.type.startsWith('image/')).map((item) => item.getAsFile()).filter(Boolean);
+          if (!files.length) return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          process(files);
+        }, true);
+      });
+    };
+
+    const getLogNewRowImages = (row) => {
+      const input = row?.querySelector('[data-subfield="conversation_images"]');
+      let images = [];
+      if (input?.dataset.imageValue) {
+        try {
+          const saved = JSON.parse(input.dataset.imageValue);
+          images = Array.isArray(saved) ? saved : [saved];
+        } catch (_) {
+          images = [input.dataset.imageValue];
+        }
+      }
+      if (!images.length) {
+        images = [...(row?.querySelectorAll('[data-subfield-container="conversation_images"] img') || [])].map((img) => img.src);
+      }
+      return [...new Set(images.map((item) => typeof item === 'string' ? item : (item?.data || item?.url || '')).filter(Boolean))];
+    };
+
+    const parseLogNewAiResponse = (rawValue) => {
+      const raw = String(rawValue || '')
+        .replace(/^\s*```(?:json|text|markdown)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim();
+      if (!raw) throw new Error('AI 未回傳內容，請稍後再試');
+
+      const keys = [
+        ['analysis', 'ANALYSIS'],
+        ['summary', 'SUMMARY'],
+        ['customerBrief', 'CUSTOMER_BRIEF'],
+        ['supportBrief', 'SUPPORT_BRIEF']
+      ];
+      const result = {};
+      const allTags = keys.map(([, tag]) => tag).concat('END').join('|');
+
+      keys.forEach(([key, tag]) => {
+        const match = raw.match(new RegExp(`<<<\\s*${tag}\\s*>>>\\s*([\\s\\S]*?)(?=<<<\\s*(?:${allTags})\\s*>>>|$)`, 'i'));
+        if (match?.[1]?.trim()) result[key] = match[1].trim();
+      });
+
+      const objectText = raw.match(/\{[\s\S]*\}/)?.[0] || '';
+      if (objectText) {
+        try {
+          const parsed = JSON.parse(objectText);
+          if (parsed && typeof parsed === 'object') {
+            result.analysis ||= String(parsed.analysis ?? parsed.ANALYSIS ?? parsed['AI分析'] ?? '').trim();
+            result.summary ||= String(parsed.summary ?? parsed.SUMMARY ?? parsed['總結'] ?? '').trim();
+            result.customerBrief ||= String(parsed.customerBrief ?? parsed.CUSTOMER_BRIEF ?? parsed['客戶問題短述'] ?? '').trim();
+            result.supportBrief ||= String(parsed.supportBrief ?? parsed.SUPPORT_BRIEF ?? parsed['我方處理短述'] ?? '').trim();
+          }
+        } catch (_) {
+          // 容許 JSON 字串中含未跳脫換行。
+        }
+
+        keys.forEach(([key], index) => {
+          if (result[key]) return;
+          const remainingKeys = keys.slice(index + 1).map(([nextKey]) => nextKey).join('|');
+          const ending = remainingKeys
+            ? `(?=\\s*,?\\s*"(?:${remainingKeys})"\\s*:|\\s*})`
+            : '(?=\\s*})';
+          const match = objectText.match(new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"\\s*${ending}`));
+          if (!match) return;
+          result[key] = match[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\')
+            .trim();
+        });
+      }
+
+      const extractSection = (title) => {
+        const match = raw.match(new RegExp(`(?:【|#{1,4}\\s*)${title}(?:】)?\\s*[:：]?\\s*([\\s\\S]*?)(?=\\n\\s*(?:【|#{1,4}\\s*)|$)`, 'i'));
+        return match?.[1]?.trim() || '';
+      };
+      const customerIssue = extractSection('客戶問題');
+      const customerImage = extractSection('客戶圖片');
+      const internalHandling = extractSection('內部處理');
+      const ownImage = extractSection('我方圖片');
+      const progress = extractSection('目前進度');
+      const todos = extractSection('後續待辦');
+
+      result.analysis ||= /【(?:客戶問題|內部處理|問題判斷|目前進度|後續待辦)】/.test(raw) ? raw : '';
+      result.customerBrief ||= [customerIssue, customerImage].filter(Boolean).join('；');
+      result.supportBrief ||= [internalHandling, ownImage, progress, todos].filter(Boolean).join('；');
+      result.summary ||= [customerIssue, progress, todos].filter(Boolean).join('；');
+
+      if (!result.analysis) result.analysis = raw;
+      result.summary ||= '請依完整 AI 分析確認案件進度。';
+      result.customerBrief ||= customerIssue || '請參考完整 AI 分析。';
+      result.supportBrief ||= internalHandling || progress || '請參考完整 AI 分析。';
+      return result;
+    };
+
+    const logNewAiResponseText = (response) => {
+      if (typeof response === 'string') return response;
+      const content =
+        response?.message?.content ??
+        response?.choices?.[0]?.message?.content ??
+        response?.content ??
+        response?.result?.message?.content ??
+        response?.result?.text ??
+        response?.text ??
+        '';
+      if (typeof content === 'string') return content;
+      if (Array.isArray(content)) {
+        return content
+          .map((item) => typeof item === 'string' ? item : (item?.text ?? item?.content ?? ''))
+          .filter(Boolean)
+          .join('\n');
+      }
+      if (content && typeof content === 'object') {
+        try { return JSON.stringify(content); } catch (_) { return String(content); }
+      }
+      return '';
+    };
+
+    const logNewAiFastHash = (value = '') => {
+      const text = String(value);
+      let hash = 2166136261;
+      const step = Math.max(1, Math.floor(text.length / 4000));
+      for (let index = 0; index < text.length; index += step) {
+        hash ^= text.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      hash ^= text.length;
+      return (hash >>> 0).toString(36);
+    };
+    const logNewAiCacheKey = (type, fingerprint) => `omniplay-log-new-ai-v2:${type}:${fingerprint}`;
+    const readLogNewAiCache = (type, fingerprint) => {
+      try { return JSON.parse(localStorage.getItem(logNewAiCacheKey(type, fingerprint)) || 'null'); }
+      catch (_) { return null; }
+    };
+    const writeLogNewAiCache = (type, fingerprint, value) => {
+      try { localStorage.setItem(logNewAiCacheKey(type, fingerprint), JSON.stringify(value)); }
+      catch (error) { console.warn('AI 快取儲存失敗：', error); }
+    };
+    const logNewRowFingerprint = (row) => {
+      const conversation = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '';
+      const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
+      const images = getLogNewRowImages(row);
+      return logNewAiFastHash(JSON.stringify({ conversation, imageSource, images }));
+    };
+    const logNewImageMedia = async (source, index) => {
+      if (!String(source).startsWith('data:')) return source;
+      const original = String(source);
+      const image = await new Promise((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = () => reject(new Error(`圖${index + 1} 無法讀取`));
+        element.src = original;
+      });
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(image, 0, 0, width, height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+      if (!blob) throw new Error(`圖${index + 1} 壓縮失敗`);
+      return new File([blob], `log-new-image-${index + 1}.jpg`, { type: 'image/jpeg' });
+    };
+
+    const inferLogNewImageOwner = (conversation, imageNumber, selectedSource) => {
+      if (selectedSource === '客戶' || selectedSource === '我方團隊') return selectedSource;
+      const marker = new RegExp(`[（(]\\s*圖\\s*${imageNumber}\\s*[）)]`, 'i').exec(conversation);
+      if (!marker) return '來源待確認';
+      const beforeMarker = conversation.slice(0, marker.index);
+      const headerPattern = /\[[^\]\n]+\]\s*([^\n:：]{1,120})[:：]/g;
+      let header;
+      let speaker = '';
+      while ((header = headerPattern.exec(beforeMarker))) speaker = header[1].trim();
+      const normalizedSpeaker = speaker.toLowerCase().replace(/[_\s-]+/g, ' ');
+      const internalNames = [
+        'igaming op', '中魁', 'jerry hu', 'andy chou', 'jim li', 'lucas', 'anton', 'hazel',
+        'pc am', 'cia', 'weiliya', 'apple', 'diane', 'kkaren', 'crystal', 'rondo', 'leo chang',
+        'yeh ryan', 'chuan chia lai', '賢 rd', 'nick', 'nina', '張家豪', 'yuting wang', 'chang how',
+        'weili huang', 'ellie', 'mike yu', '修全', 'tony yang', 'andrew', 'pien', 'suigetsu'
+      ];
+      return internalNames.some((name) => normalizedSpeaker.includes(name)) ? '我方團隊' : (speaker ? '客戶' : '來源待確認');
+    };
+
+    const mergeLogNewImageFindings = (analysis, findings = []) => {
+      let output = normalizeLogNewAiAnalysis(analysis);
+      const appendTo = (title, lines) => {
+        if (!lines.length) return;
+        output = output.replace(new RegExp(`(【${title}】\\n)([\\s\\S]*?)(?=\\n\\n【|$)`), (_, heading, current) => {
+          const cleanCurrent = /^(?:對話或圖片未提供|圖片未提供|未提供)[。.]?$/.test(current.trim()) ? '' : current.trim();
+          return `${heading}${[cleanCurrent, `圖片辨識：\n${lines.join('\n\n')}`].filter(Boolean).join('\n')}`;
+        });
+      };
+      appendTo('客戶問題', findings.filter((item) => item.owner === '客戶').map((item) => item.text));
+      appendTo('內部處理', findings.filter((item) => item.owner === '我方團隊').map((item) => item.text));
+      appendTo('問題判斷', findings.filter((item) => item.owner === '來源待確認').map((item) => `${item.text}\n圖片來源待確認`));
+      return output;
+    };
+
+    const ensureLogNewProcessingFileField = () => {
+      const schemaFields = RAGIC_STATE?.schema?.fields;
+      if (!Array.isArray(schemaFields)) return;
+      const itemsField = schemaFields.find((field) => field.key === 'items' || field.type === 'subtable');
+      if (!itemsField) return;
+      if (!Array.isArray(itemsField.fields)) itemsField.fields = [];
+      let fileField = itemsField.fields.find((field) => field.key === 'conversation_files');
+      if (!fileField) {
+        fileField = {
+          key: 'conversation_files',
+          label: '檔案',
+          type: 'file',
+          width: 420
+        };
+        itemsField.fields.push(fileField);
+      }
+
+      document.querySelectorAll('#ragicForm [data-subtable="items"] .subtable-row').forEach((row) => {
+        const grid = row.querySelector('.subtable-row-fields');
+        if (!grid || grid.querySelector('.subtable-row-field-file')) return;
+        const fieldWrap = document.createElement('label');
+        fieldWrap.className = 'subtable-row-field subtable-row-field-file';
+        fieldWrap.innerHTML = '<span>檔案</span>';
+        const control = createControl(fileField, '', true);
+        const area = createFileUploadArea(fileField, control, '', { subfield: true });
+        fieldWrap.appendChild(area);
+        grid.appendChild(fieldWrap);
+        attachImageUploadArea(area);
+      });
+    };
+
+    const enhanceLogNewAiUi = () => {
+      ensureLogNewProcessingFileField();
+      bindConversationAutoFormat();
+      bindLogNewCompletionAutoFill();
+      const section = document.querySelector('#ragicForm [data-subtable="items"]');
+      const head = section?.querySelector('.ragic-subtable-head');
+      if (!head || head.querySelector('[data-log-new-ai]')) return;
+      let actionGroup = head.querySelector('.log-new-subtable-actions');
+      if (!actionGroup) {
+        actionGroup = document.createElement('div');
+        actionGroup.className = 'log-new-subtable-actions';
+        const addDetailButton = head.querySelector(':scope > button');
+        if (addDetailButton) actionGroup.appendChild(addDetailButton);
+        head.appendChild(actionGroup);
+      }
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary';
+      button.dataset.logNewAi = 'true';
+      button.textContent = '分析新增內容';
+      button.title = '只分析新增或已修改的對話與圖片；未變更內容會沿用快取結果。';
+      const forceButton = document.createElement('button');
+      forceButton.type = 'button';
+      forceButton.className = 'ghost-button';
+      forceButton.dataset.logNewAiForce = 'true';
+      forceButton.textContent = '↻ 全部重新分析';
+      forceButton.title = '忽略快取並重新分析全部內容，會消耗較多 AI 額度。';
+      forceButton.addEventListener('click', () => {
+        if (!confirm('全部重新分析會再次消耗所有文字與圖片的 AI 額度，確定要繼續嗎？')) return;
+        button.dataset.forceAll = 'true';
+        button.click();
+      });
+      button.addEventListener('click', async () => {
+        const rows = [...section.querySelectorAll('.subtable-row')].filter((row) => row.querySelector('[data-subfield="conversation"]')?.value.trim() || getLogNewRowImages(row).length);
+        if (!rows.length) return alert('請先貼上「對話」或加入「對話圖片」。');
+        const forceAll = button.dataset.forceAll === 'true';
+        delete button.dataset.forceAll;
+        const jobs = rows.map((row) => {
+          const fingerprint = logNewRowFingerprint(row);
+          return { row, fingerprint, cached: forceAll ? null : readLogNewAiCache('row', fingerprint) };
+        });
+        const pendingJobs = jobs.filter((job) => !job.cached);
+        if (!forceAll && !pendingJobs.length) return alert('內容沒有變更，已保留原本的 AI 分析，不會重複消耗額度。');
+        if (!window.puter?.ai?.chat) return alert('免費 AI 載入失敗，請確認網路後重新整理頁面再試。');
+        if (!window.puter?.auth?.isSignedIn || !window.puter?.auth?.signIn) return alert('Puter 登入功能載入失敗，請重新整理頁面再試。');
+        if (!forceAll && !confirm(`將分析 ${pendingJobs.length} 筆新增或已修改內容；未變更內容不會重新送出。內容可能包含客戶資料，確定要繼續嗎？`)) return;
+
+        const originalText = button.textContent;
+        if (!puter.auth.isSignedIn()) {
+          button.textContent = '等待 Puter 登入…';
+          try {
+            await puter.auth.signIn();
+          } catch (error) {
+            console.error('Puter 登入失敗：', error);
+            const errorCode = String(error?.error || error?.code || '');
+            if (errorCode === 'popup_blocked') {
+              alert('Puter 登入視窗被瀏覽器封鎖。請允許此網站開啟彈出式視窗後，再按一次 AI 分析。');
+            } else if (errorCode === 'auth_window_closed') {
+              alert('已取消 Puter 登入，AI 分析尚未執行。');
+            } else {
+              alert(`Puter 登入失敗：${error?.msg || error?.message || '請稍後再試'}`);
+            }
+            button.textContent = originalText;
+            return;
+          }
+          if (!puter.auth.isSignedIn()) {
+            alert('Puter 尚未完成登入，AI 分析尚未執行。');
+            button.textContent = originalText;
+            return;
+          }
+        }
+
+        button.disabled = true;
+        forceButton.disabled = true;
+        const totalUnits = Math.max(1, pendingJobs.reduce((total, job) => total + getLogNewRowImages(job.row).length + 1, 0));
+        let completedUnits = 0;
+        let progress = 0;
+        let analysisSucceeded = false;
+        const showProgress = (value) => {
+          progress = Math.max(progress, Math.min(100, Math.round(value)));
+          button.textContent = `AI 分析中 ${progress}%`;
+        };
+        showProgress(0);
+        const progressTimer = setInterval(() => {
+          if (progress >= 92) return;
+          showProgress(progress + Math.max(1, Math.ceil((92 - progress) * 0.06)));
+        }, 700);
+        try {
+          const briefs = [];
+          for (let index = 0; index < jobs.length; index += 1) {
+            const job = jobs[index];
+            const row = job.row;
+            if (job.cached?.result) {
+              // 保留使用者在畫面上手動修正過的分析文字；快取只用於避免重跑與彙整問題描述。
+              briefs.push(job.cached.brief || {
+                customerBrief: job.cached.result.customerBrief || '',
+                supportBrief: job.cached.result.supportBrief || '',
+                startsWithInternal: false,
+                internalDepartment: '客服'
+              });
+              continue;
+            }
+            const conversationText = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
+            const conversationEntries = logNewConversationEntries(conversationText);
+            const visibleSpeakers = [...new Set(conversationEntries.map((entry) => entry.speaker).filter(Boolean))];
+            const startsWithInternal = conversationEntries.length ? isLogNewInternalSpeaker(conversationEntries[0].speaker) : false;
+            const firstInternalSpeaker = conversationEntries.find((entry) => isLogNewInternalSpeaker(entry.speaker))?.speaker || '';
+            const internalDepartment = logNewSpeakerDepartment(firstInternalSpeaker) || '客服';
+            const classifiedSpeakers = visibleSpeakers
+              .map((speaker) => {
+                const department = logNewSpeakerDepartment(speaker);
+                return `${speaker}＝${department ? `OMNIPLAY 內部／${department}` : '客戶／外部窗口'}`;
+              })
+              .join('；');
+            let conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
+            const images = getLogNewRowImages(row);
+            const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
+            const imageFindings = [];
+            if (images.length) {
+              for (let imageIndex = 0; imageIndex < images.length; imageIndex += 1) {
+                const imageFingerprint = logNewAiFastHash(`${imageSource}|${images[imageIndex]}`);
+                let imageText = forceAll ? '' : readLogNewAiCache('image', imageFingerprint)?.text || '';
+                if (!imageText) {
+                  const imageResponse = await puter.ai.chat(
+                    `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
+                    await logNewImageMedia(images[imageIndex], imageIndex),
+                    { model: 'gpt-5.4-nano', temperature: 0, max_tokens: 250 }
+                  );
+                  imageText = logNewAiResponseText(imageResponse);
+                  writeLogNewAiCache('image', imageFingerprint, { text: imageText });
+                }
+                imageFindings.push({
+                  owner: inferLogNewImageOwner(conversationText, imageIndex + 1, imageSource),
+                  text: `圖${imageIndex + 1}：${imageText}`
+                });
+                completedUnits += 1;
+                showProgress((completedUnits / totalUnits) * 92);
+              }
+              conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
+            }
+            const prompt = `你是 OMNIPLAY 客服案件分析助手。必須依照下方唯一且完整的 OMNIPLAY 內部團隊名單辨識發言者。\n\nOMNIPLAY 內部團隊名單（只能用於判斷內外部，不能把未出現在對話中的名單人員寫入分析）：\n${logNewTeamDirectoryText}\n\n本段對話實際出現的發言者：${visibleSpeakers.join('、') || '無法辨識'}\n\n人員判斷規則（必須遵守）：\n1. 名單內的人才是 OMNIPLAY 內部人員；不在名單內的發言者一律視為客戶或外部窗口，不得寫成「可能是內部」、「未在名錄中需確認」或把外部人員列入【內部處理】。\n2. 比對姓名時忽略大小寫、emoji、空格、底線、連字號，以及商務、AM、PM、RD、IT、SRE、DBA、OP 等部門後綴。\n3. igaming-op 是 OMNIPLAY 客服帳號；其訊息結尾「-代碼」是客服人員代碼。分析內只能照原文寫 igaming-op 或該代碼，不得把代碼展開成對話中沒出現的姓名。\n4. 即使沒有 Excel、圖片或附件，也必須只依文字對話的發言者與內容完成內外部判斷。\n5. 團隊名單只供身分比對。分析中可出現的姓名僅限「本段對話實際出現的發言者」，不得加入名單中其他未發言的人。\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。只有實際有圖片時才能寫圖片內容；沒有圖片時，省略所有圖片段落，不得寫圖片推論。\n\n事實判斷規則（必須遵守）：\n1. 嚴格按照對話時間順序判斷「誰先提出／告知、誰轉請同仁查看、誰回覆」。不可預設一定是客戶先提出問題。\n2. 如果是 OMNIPLAY 先告知客戶異常或狀態，必須明確寫成「OMNIPLAY／igaming-op 主動告知客戶」，不可改寫成客戶反映。\n3. 只能寫對話或圖片明確出現的人、事件、數字、狀態、處理與回覆。玩家 ID、注單號、遊戲 ID、日期、時間與金額必須逐字複製，不得改寫、補零、換算或猜測。不可自行補充原因、缺少資料、風險、確認結果、處理方案或下一步。\n4. 對話沒有要求補注單號、玩家 ID、遊戲、金額或其他資料時，禁止建議補資料。\n5. 客戶僅將訊息轉請自己的同仁查看時，只能寫「客戶方轉請同仁查看」及實際回覆，不得描述成 OMNIPLAY 內部處理。\n\n輸出規則：\n1. analysis 只保留有明確對話事實的段落，可使用【事件經過】、【客戶方回覆】、【目前進度】；沒有內容的【客戶問題】、【客戶圖片】、【內部處理】、【我方圖片】、【問題判斷】、【後續待辦】必須省略，不得用推測補滿。\n2. summary 最多 80 個中文字，只摘要已發生的事與目前明確回覆；對話未交代下一步時，不得自行新增下一步。\n3. customerBrief 最多 35 個中文字；若客戶沒有提出問題，應寫客戶實際動作或回覆，不得虛構客戶問題。\n4. supportBrief 最多 45 個中文字，只寫 OMNIPLAY 在對話中實際做過的事。\n5. 所有內容使用繁體中文，語意完整，不得輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n\n對話內容：\n${conversation}`;
+            const finalPrompt = `${prompt}
+
+系統已完成發言者分類：${classifiedSpeakers || '無法辨識'}。必須直接採用此分類，不得自行改判。
+
+最終簡化規則（優先於前面所有輸出規則）：
+1. analysis 最多兩句，只按時間順序寫對話明確發生的核心事件，不要標題、分段、人物關係分析、問題判斷或後續建議。
+2. summary 只能一句，寫目前明確進度，例如「等待客戶確認」。
+3. 先判斷對話共有幾個不同問題；同一問題的追問、補充與回覆不得重複計算。不同異常或不同需求才建立下一個編號。
+4. customerBrief 與 supportBrief 必須使用「1. 簡述 2. 簡述」格式，雙方針對同一問題必須使用相同編號。每項最多 20 個中文字，只保留核心問題、動作或處理結果。
+5. customerBrief 只寫客戶在各問題中的實際提出、回覆或處理狀態；客戶沒有對應內容時，該編號不要虛構內容。若客戶轉請自己的同仁確認，可簡寫為「已請人員確認」。
+6. supportBrief 只寫 OMNIPLAY 內部人員在各問題中的實際提出、回覆或處理結果；不要在內容中重複客服、商務、技術等部門名稱。沒有對應內容時，該編號不要虛構內容。
+7. 問題描述會由系統依角色合併成各一行，格式例如「客服：1. 確認4筆9015 2. 重新整理再登入」及「客戶：1. 已請人員確認 2. 玩家無法進入遊戲」。只能寫已知事實，不得加入分析或建議。
+8. 第一個問題由 OMNIPLAY 內部先提出，就先顯示該發言者的實際部門；由客戶先提出，就先顯示「客戶」。OMNIPLAY 內部部門由系統判斷，不得全部固定為客服。
+
+嚴格使用以下分隔標記；標記不得省略，不要加 Markdown 程式碼框：
+<<<ANALYSIS>>>
+一至兩句事實摘要
+<<<SUMMARY>>>
+一句目前進度
+<<<CUSTOMER_BRIEF>>>
+1. 客戶在問題1的簡述 2. 客戶在問題2的簡述
+<<<SUPPORT_BRIEF>>>
+1. OMNIPLAY在問題1的簡述 2. OMNIPLAY在問題2的簡述
+<<<END>>>`;
+            const options = {
+              model: 'gpt-5.4-nano',
+              temperature: 0,
+              max_tokens: 600
+            };
+            const response = await puter.ai.chat(finalPrompt, options);
+            const raw = logNewAiResponseText(response);
+            const result = parseLogNewAiResponse(raw);
+            result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
+            result.verificationWarnings = validateLogNewAiResult({
+              raw,
+              result,
+              source: `${conversationText}\n${imageFindings.map((item) => item.text).join('\n')}`,
+              hasImages: images.length > 0
+            });
+            result.analysis = appendLogNewAiWarnings(result.analysis, result.verificationWarnings);
+            row.classList.toggle('has-ai-verification-warning', result.verificationWarnings.length > 0);
+            window.applyLogNewAiResult(row, result);
+            const brief = {
+              customerBrief: result.customerBrief || '',
+              supportBrief: result.supportBrief || '',
+              startsWithInternal,
+              internalDepartment
+            };
+            briefs.push(brief);
+            writeLogNewAiCache('row', job.fingerprint, { result, brief });
+            completedUnits += 1;
+            showProgress((completedUnits / totalUnits) * 98);
+          }
+          const issue = document.querySelector('#ragicForm [name="issue"]');
+          if (issue) {
+            const parseNumberedBriefItems = (value = '') => {
+              const text = String(value)
+                .replace(/\uFFFD/g, '')
+                .replace(/[◆◇�]+/g, '')
+                .replace(/\r\n?/g, '\n')
+                .trim();
+              if (!text) return [];
+              const matches = [...text.matchAll(/(?:^|\s)(\d{1,2})[.、．]\s*([\s\S]*?)(?=\s+\d{1,2}[.、．]\s*|$)/g)];
+              if (!matches.length) return [text.replace(/^\d{1,2}[.、．]\s*/, '').trim()].filter(Boolean);
+              const items = [];
+              matches.forEach((match) => {
+                const number = Math.max(1, Number(match[1]) || 1);
+                const brief = match[2]
+                  .replace(/\s+/g, ' ')
+                  .replace(/[。；，、\s]+$/, '')
+                  .trim();
+                if (brief) items[number - 1] = brief;
+              });
+              return items;
+            };
+            const roleItems = new Map();
+            const roleOrder = [];
+            const addRoleItem = (role, number, text) => {
+              if (!text) return;
+              if (!roleItems.has(role)) roleItems.set(role, []);
+              if (!roleOrder.includes(role)) roleOrder.push(role);
+              roleItems.get(role).push(`${number}. ${text}`);
+            };
+            let issueNumber = 0;
+            briefs.forEach((brief) => {
+              const customerItems = parseNumberedBriefItems(brief.customerBrief);
+              const supportItems = parseNumberedBriefItems(brief.supportBrief);
+              const itemCount = Math.max(customerItems.length, supportItems.length, 1);
+              const internalRole = brief.internalDepartment || '客服';
+              for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
+                const customerItem = customerItems[itemIndex] || '';
+                const supportItem = supportItems[itemIndex] || '';
+                if (!customerItem && !supportItem) continue;
+                issueNumber += 1;
+                if (brief.startsWithInternal) {
+                  addRoleItem(internalRole, issueNumber, supportItem);
+                  addRoleItem('客戶', issueNumber, customerItem);
+                } else {
+                  addRoleItem('客戶', issueNumber, customerItem);
+                  addRoleItem(internalRole, issueNumber, supportItem);
+                }
+              }
+            });
+            issue.value = roleOrder
+              .map((role) => `${role}：${roleItems.get(role).join(' ')}`)
+              .join('\n');
+            issue.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          analysisSucceeded = true;
+          showProgress(100);
+          alert(`AI 分析完成：本次重新分析 ${pendingJobs.length} 筆，未變更內容沿用快取。請確認內容後再儲存。`);
+        } catch (error) {
+          console.error('日誌 NEW AI 分析失敗：', error);
+          alert(`AI 分析失敗：${error?.message || '請稍後再試'}`);
+        } finally {
+          clearInterval(progressTimer);
+          button.disabled = false;
+          forceButton.disabled = false;
+          if (analysisSucceeded) {
+            button.textContent = 'AI 分析完成 100%';
+            setTimeout(() => { if (!button.disabled) button.textContent = originalText; }, 1800);
+          } else {
+            button.textContent = originalText;
+          }
+        }
+      });
+      actionGroup.appendChild(button);
+      actionGroup.appendChild(forceButton);
+    };
+
+    // 設計器儲存成功並關閉後重新載入，確保最新 Firebase 排版立刻套用到日誌 NEW。
+    document.querySelector('#saveSchemaButton')?.addEventListener('click', () => {
+      let checks = 0;
+      const waitForDesignerSave = setInterval(() => {
+        checks += 1;
+        const modal = document.querySelector('#ragicDesignerModal');
+        if (modal?.hidden) {
+          clearInterval(waitForDesignerSave);
+          window.location.reload();
+        } else if (checks >= 30) {
+          clearInterval(waitForDesignerSave);
+        }
+      }, 200);
+    });
+
+    const applyConversationImportDraft = async () => {
+      const raw = sessionStorage.getItem('omniplayConversationImport');
+      if (!raw || !new URLSearchParams(location.search).has('conversation')) return;
+      let draft; try { draft = JSON.parse(raw); } catch (_) { return; }
+      if (window.firebase?.auth && !firebase.auth().currentUser) {
+        try { await firebase.auth().signInAnonymously(); } catch (error) { console.warn('收件匣身份建立失敗', error); }
+      }
+      let row = null;
+      for (let attempt = 0; attempt < 60 && !row; attempt += 1) {
+        if (!document.querySelector('#ragicFormView:not([hidden])')) document.querySelector('#newRecordButton')?.click();
+        row = document.querySelector('#ragicForm [data-subtable="items"] .subtable-row');
+        if (!row) await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      if (!row) return alert('無法建立日誌匯入草稿，請重新從收件匣按「匯入」。');
+      const setValue = (selector, value) => {
+        const control = document.querySelector(selector);
+        if (!control || value == null) return;
+        control.value = value;
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+        control.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      const created = draft.createdAtMillis ? new Date(draft.createdAtMillis) : new Date(draft.date);
+      if (!Number.isNaN(created.getTime())) {
+        const pad = value => String(value).padStart(2, '0');
+        setValue('#ragicForm [name="date"]', `${created.getFullYear()}-${pad(created.getMonth()+1)}-${pad(created.getDate())}T${pad(created.getHours())}:${pad(created.getMinutes())}`);
+      }
+      // AI 的狀態只能作為建議；匯入本身不可直接把日誌標成已完成。
+      // 先放入對話，之後若使用者選擇已完成，才能從最後一段正確帶入完成者與完成時間。
+      setValue('#ragicForm [data-subfield="conversation"]', draft.conversationText || '');
+      const importedStatus = draft.suggestedStatus === '已完成' ? '待辦中' : (draft.suggestedStatus || '待辦中');
+      setValue('#ragicForm [name="status"]', importedStatus);
+      setValue('#ragicForm [name="category"]', draft.suggestedCategory || '待定');
+      if (importedStatus === '已完成') await fillLogNewCompletionFields({ notify: false });
+      const images = (draft.attachments || []).filter(item => item.type === 'photo' && item.url).map(item => item.url);
+      const imageInput = row.querySelector('[data-subfield="conversation_images"]');
+      const imageArea = imageInput?.closest('.image-upload-area');
+      if (imageInput && imageArea && images.length) {
+        imageInput.dataset.imageValue = JSON.stringify(images);
+        showImagePreview(images, imageArea, '圖片');
+      }
+      const importedAnalysis = draft.analysis || {};
+      const analysisControl = row.querySelector('[data-subfield="ai_analysis"]');
+      const summaryControl = row.querySelector('[data-subfield="summary"]');
+      const issueControl = document.querySelector('#ragicForm [name="issue"]');
+      if (analysisControl) analysisControl.value = normalizeLogNewAiAnalysis(importedAnalysis.analysis || importedAnalysis.fullText || '');
+      if (summaryControl) summaryControl.value = importedAnalysis.summary || importedAnalysis.reason || '';
+      if (issueControl) {
+        issueControl.value = importedAnalysis.customerBrief || importedAnalysis.supportBrief
+          ? `客戶：${importedAnalysis.customerBrief || importedAnalysis.issue || ''}\n客服：${importedAnalysis.supportBrief || ''}`
+          : (importedAnalysis.issue || '');
+      }
+      [analysisControl, summaryControl, issueControl].filter(Boolean).forEach(control => {
+        control.dispatchEvent(new Event('input', { bubbles: true }));
+        control.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      window.__conversationImportId = draft.conversationId;
+      if (draft.inboxApiBase) sessionStorage.setItem('omniplayInboxApiBase', draft.inboxApiBase);
+      sessionStorage.removeItem('omniplayConversationImport');
+      history.replaceState({}, '', location.pathname);
+      alert('Conversation 與收件匣 AI 分析結果已完整匯入，請確認後儲存。');
+    };
+
+    document.querySelector('#ragicForm')?.addEventListener('submit', () => {
+      const conversationId = window.__conversationImportId;
+      if (!conversationId) return;
+      setTimeout(async () => {
+        try {
+          const logId = window.getCurrentRagicRecordId?.() || '';
+          if (!logId) return;
+          const apiBase = sessionStorage.getItem('omniplayInboxApiBase') || '';
+          const apiKey = sessionStorage.getItem('omniplayInboxAccessKey') || '';
+          if (apiBase && apiKey) {
+            const response = await fetch(apiBase.replace(/\/$/, '') + '/api/conversations/' + encodeURIComponent(conversationId), {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json', authorization: 'Bearer ' + apiKey },
+              body: JSON.stringify({ imported: true, importedLogId: logId })
+            });
+            if (!response.ok) throw new Error('Conversation API ' + response.status);
+          } else if (window.omniplayDb) {
+            await window.omniplayDb.collection('conversations').doc(conversationId).update({
+              imported: true,
+              importedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              importedLogId: logId
+            });
+          }
+          window.__conversationImportId = '';
+          sessionStorage.removeItem('omniplayInboxApiBase');
+          sessionStorage.removeItem('omniplayInboxAccessKey');
+        } catch (error) { console.error('Conversation 匯入狀態更新失敗', error); }
+      }, 1800);
+    });
+    setTimeout(applyConversationImportDraft, 300);
+
+    // 欄位結構只在執行期補齊，不再因結構差異自動重新載入頁面。
+    new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
+    enhanceLogNewAiUi();
+    migrateSavedLogNewConversations();
+  </script>
+
+  <script>
+    // 日誌 NEW：列表中的問題描述一律使用完整原文，並依內容自動換行撐高。
+    (() => {
+      const showFullIssueDescriptions = () => {
+        document.querySelectorAll('#ragicListView .ragic-table td[data-field-key="issue"], #ragicListView .ragic-table td:nth-child(7)').forEach((cell) => {
+          const fullText = cell.getAttribute('title');
+          if (fullText && (cell.textContent.trim().endsWith('…') || cell.textContent.trim().endsWith('...') || cell.textContent.length < fullText.length)) {
+            cell.textContent = fullText;
+          }
+          cell.style.setProperty('white-space', 'pre-wrap', 'important');
+          cell.style.setProperty('overflow', 'visible', 'important');
+          cell.style.setProperty('text-overflow', 'clip', 'important');
+          cell.style.setProperty('height', 'auto', 'important');
+          cell.style.setProperty('max-height', 'none', 'important');
+          cell.style.setProperty('overflow-wrap', 'anywhere', 'important');
+          cell.style.setProperty('word-break', 'break-word', 'important');
+        });
+      };
+      const listView = document.querySelector('#ragicListView');
+      if (listView) new MutationObserver(showFullIssueDescriptions).observe(listView, { childList: true, subtree: true });
+      showFullIssueDescriptions();
+    })();
+  </script>
+
+  <style>
+    .log-new-datetime-split { position: relative; width: 100%; }
+    .log-new-date-display { width: 100% !important; min-width: 0 !important; cursor: pointer; }
+    .log-new-calendar-time {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .log-new-calendar-time label { flex: 0 0 auto; font-size: 13px; font-weight: 700; color: var(--text-secondary); }
+    .log-new-time-input { flex: 1 1 auto; min-width: 0 !important; height: 38px !important; }
+    .log-new-calendar-done { flex: 0 0 auto; min-height: 38px !important; padding: 6px 12px !important; border-radius: 8px; background: var(--primary); color: #fff; font-weight: 800; }
+    .log-new-calendar { position: absolute; z-index: 10030; top: calc(100% + 6px); left: 0; width: 320px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 40px rgba(15,23,42,.22); }
+    .log-new-calendar[hidden] { display: none !important; }
+    .log-new-calendar-head { display: grid; grid-template-columns: 38px 1fr 1fr 38px; gap: 6px; margin-bottom: 10px; }
+    .log-new-calendar-head button, .log-new-calendar-head select { min-height: 38px !important; padding: 5px 7px !important; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    .log-new-calendar-week, .log-new-calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .log-new-calendar-week span { padding: 5px 0; color: var(--text-secondary); text-align: center; font-size: 12px; }
+    .log-new-calendar-days button { min-height: 34px !important; padding: 4px !important; border-radius: 8px; background: transparent; color: var(--text); font-weight: 600; }
+    .log-new-calendar-days button:hover { background: var(--primary-soft); }
+    .log-new-calendar-days button.is-selected { background: var(--primary); color: #fff; }
+    .log-new-calendar-days button:disabled { visibility: hidden; }
+    @media (max-width: 430px) { .log-new-calendar { width: min(320px, calc(100vw - 32px)); } }
+  </style>
+  <script>
+    // 日誌 NEW：單一日期時間欄位，點開後使用自訂月曆並在月曆內選時間。
+    (() => {
+      const pad = (value) => String(value).padStart(2, '0');
+      const enhanceDateTimePicker = () => {
+        const original = document.querySelector('#ragicForm input[name="date"][type="datetime-local"]');
+        if (!original || original.dataset.easyDateTime === 'true') return;
+        original.dataset.easyDateTime = 'true';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'log-new-datetime-split';
+        const dateDisplay = document.createElement('input');
+        dateDisplay.type = 'text';
+        dateDisplay.readOnly = true;
+        dateDisplay.className = 'log-new-date-display';
+        dateDisplay.setAttribute('aria-label', '選擇日期');
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+        timeInput.step = '60';
+        timeInput.className = 'log-new-time-input';
+        timeInput.required = original.required;
+        timeInput.setAttribute('aria-label', '時間');
+
+        const calendar = document.createElement('div');
+        calendar.className = 'log-new-calendar';
+        calendar.hidden = true;
+        calendar.innerHTML = '<div class="log-new-calendar-head"><button type="button" data-step="-1">‹</button><select data-year aria-label="年份"></select><select data-month aria-label="月份"></select><button type="button" data-step="1">›</button></div><div class="log-new-calendar-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="log-new-calendar-days"></div><div class="log-new-calendar-time"><label>時間</label><span data-time-slot></span><button class="log-new-calendar-done" type="button">完成</button></div>';
+        const yearSelect = calendar.querySelector('[data-year]');
+        const monthSelect = calendar.querySelector('[data-month]');
+        const days = calendar.querySelector('.log-new-calendar-days');
+        calendar.querySelector('[data-time-slot]').appendChild(timeInput);
+        const doneButton = calendar.querySelector('.log-new-calendar-done');
+        for (let year = 2000; year <= 2100; year += 1) yearSelect.insertAdjacentHTML('beforeend', '<option value="' + year + '">' + year + ' 年</option>');
+        for (let month = 0; month < 12; month += 1) monthSelect.insertAdjacentHTML('beforeend', '<option value="' + month + '">' + (month + 1) + ' 月</option>');
+
+        let selected = new Date();
+        const refreshDisplay = () => {
+          const dateValue = dateDisplay.dataset.value || '';
+          const [hourText = '', minute = ''] = String(timeInput.value || '').split(':');
+          const hour = Number(hourText);
+          const timeText = hourText
+            ? (hour < 12 ? '上午 ' : '下午 ') + pad(hour % 12 || 12) + ':' + minute
+            : '';
+          dateDisplay.value = [dateValue ? dateValue.replace(/-/g, '/') : '', timeText].filter(Boolean).join(' ');
+        };
+        const writeOriginal = () => {
+          const dateValue = dateDisplay.dataset.value || '';
+          original.value = dateValue && timeInput.value ? dateValue + 'T' + timeInput.value : '';
+          refreshDisplay();
+          original.dispatchEvent(new Event('input', { bubbles: true }));
+          original.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        const renderCalendar = () => {
+          yearSelect.value = String(selected.getFullYear());
+          monthSelect.value = String(selected.getMonth());
+          days.innerHTML = '';
+          const firstDay = new Date(selected.getFullYear(), selected.getMonth(), 1).getDay();
+          const total = new Date(selected.getFullYear(), selected.getMonth() + 1, 0).getDate();
+          for (let index = 0; index < firstDay; index += 1) days.insertAdjacentHTML('beforeend', '<button type="button" disabled></button>');
+          const currentValue = dateDisplay.dataset.value || '';
+          for (let day = 1; day <= total; day += 1) {
+            const value = selected.getFullYear() + '-' + pad(selected.getMonth() + 1) + '-' + pad(day);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = String(day);
+            button.classList.toggle('is-selected', value === currentValue);
+            button.addEventListener('click', () => {
+              dateDisplay.dataset.value = value;
+              selected = new Date(selected.getFullYear(), selected.getMonth(), day);
+              writeOriginal();
+              renderCalendar();
+            });
+            days.appendChild(button);
+          }
+        };
+        const readOriginal = () => {
+          const value = String(original.value || '');
+          const dateValue = value.slice(0, 10);
+          dateDisplay.dataset.value = dateValue;
+          timeInput.value = value.slice(11, 16);
+          refreshDisplay();
+          if (dateValue) {
+            const parts = dateValue.split('-').map(Number);
+            selected = new Date(parts[0], parts[1] - 1, parts[2]);
+          }
+          renderCalendar();
+        };
+
+        dateDisplay.addEventListener('click', () => { calendar.hidden = !calendar.hidden; renderCalendar(); });
+        timeInput.addEventListener('change', writeOriginal);
+        doneButton.addEventListener('click', () => { writeOriginal(); calendar.hidden = true; });
+        original.addEventListener('input', readOriginal);
+        yearSelect.addEventListener('change', () => { selected.setFullYear(Number(yearSelect.value)); renderCalendar(); });
+        monthSelect.addEventListener('change', () => { selected.setMonth(Number(monthSelect.value)); renderCalendar(); });
+        calendar.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => { selected.setMonth(selected.getMonth() + Number(button.dataset.step)); renderCalendar(); }));
+        document.addEventListener('click', (event) => { if (!wrapper.contains(event.target)) calendar.hidden = true; });
+
+        readOriginal();
+        original.hidden = true;
+        original.insertAdjacentElement('afterend', wrapper);
+        wrapper.append(dateDisplay, calendar);
+      };
+      const formView = document.querySelector('#ragicFormView');
+      if (formView) new MutationObserver(enhanceDateTimePicker).observe(formView, { childList: true, subtree: true });
+      enhanceDateTimePicker();
+    })();
+  </script>
+</body>
+</html>
