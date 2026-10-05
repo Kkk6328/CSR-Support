@@ -257,6 +257,7 @@ const updateTodayWorking = () => {
   const list = document.querySelector('#todayWorkingList');
   setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
   if (!list) return;
+  if (!dashboardDb) { list.textContent = window.CSR_PREVIEW_MESSAGE; return; }
   if (!dashboardState.externalLeaveLoaded) { list.textContent = '載入中...'; return; }
   const externalPeople = dashboardState.externalLeave || {};
   const sourceNames = Object.keys(externalPeople).map((name) => String(name || '').trim()).filter(Boolean);
@@ -298,34 +299,6 @@ const updateDashboard = () => {
   updateTodayWorking();
   updateShiftButtons();
   renderTodoList();
-};
-
-const loadDashboardExternalLeave = async () => {
-  const targetMonth = monthKey();
-  const apiBase = (window.CSR_API_BASE || '').replace(/\/+$/, '');
-  // ⛔ 死規則(2026-08-13 中魁):假表資料源只有兩個——①/api/ext/leave(公司排班鏡射=唯一真相)
-  // ②舊 worker(僅故障備援)。禁止新增其他來源、禁止調換順序(見 AGENTS.md 規則 9)。
-  const sources = [
-    `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`,
-    `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}`
-  ];
-  dashboardState.externalLeave = {};
-  for (const url of sources) {
-    try {
-      const response = await fetch(url, { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      const people = payload?.people;
-      const hasValidPeople = people && typeof people === 'object' && !Array.isArray(people) && Object.keys(people).length > 0;
-      if (payload?.month !== targetMonth || !hasValidPeople) throw new Error('同步來源不是指定月份的休假人員資料');
-      dashboardState.externalLeave = people;
-      break;
-    } catch (error) {
-      console.warn('首頁外部假表載入失敗', error);
-    }
-  }
-  dashboardState.externalLeaveLoaded = true;
-  updateDashboard();
 };
 
 const updateShiftButtons = () => {
@@ -749,14 +722,7 @@ document.querySelectorAll('.shift-btn').forEach((button) => {
     updateDashboard();
   });
 });
-if (dashboardAuthenticated) {
-  subscribeDashboard();
-  loadDashboardExternalLeave();
-  window.setInterval(loadDashboardExternalLeave, 60 * 1000);
-  window.addEventListener('focus', loadDashboardExternalLeave);
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') loadDashboardExternalLeave();
-  });
-}
+updateDashboard();
 window.getShiftRange = getShiftRange;
 window.getDefaultShift = getDefaultShift;
+

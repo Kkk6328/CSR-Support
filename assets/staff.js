@@ -133,7 +133,7 @@ const openEditModal = (staffId) => {
 const loadStaff = () => {
   if (!staffCollection) {
     renderStaff([]);
-    setMessage('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。');
+    setMessage('尚未設定資料庫，目前僅供介面預覽。');
     return;
   }
 
@@ -150,7 +150,7 @@ const loadStaff = () => {
 staffForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!canEditStaff()) return setMessage('您沒有編輯人員管理的權限。');
-  if (!staffCollection) return setMessage('Firebase 尚未完成初始化，無法儲存資料。');
+  if (!staffCollection) return setMessage('尚未設定資料庫，目前僅供介面預覽。');
 
   const currentStaff = editingStaffId ? staffCache.find((item) => item.id === editingStaffId) : null;
   const payload = {
@@ -161,7 +161,7 @@ staffForm?.addEventListener('submit', async (event) => {
     leaveVisible: staffLeaveVisibleInput?.checked !== false,
     sortOrder: getDefaultSortOrder(document.querySelector('#staffName').value.trim()),
     status: '啟用',
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: new Date()
   };
 
   if (canViewStaffSecrets()) payload.password = document.querySelector('#staffPassword').value.trim();
@@ -184,7 +184,7 @@ staffForm?.addEventListener('submit', async (event) => {
     } else {
       await staffCollection.add({
         ...payload,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date()
       });
     }
     toggleModal(false);
@@ -227,7 +227,7 @@ staffTableBody?.addEventListener('click', async (event) => {
     try {
       await staffCollection.doc(id).update({
         status: staff.status === '停用' ? '啟用' : '停用',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: new Date()
       });
     } catch (error) {
       console.error('更新人員狀態失敗：', error);
@@ -312,7 +312,7 @@ const renderPermissionManager = async (staffId = null) => {
 };
 
 const savePermissions = async () => {
-  if (!permissionsCollection) return alert('Firebase 尚未完成初始化，無法儲存權限。');
+  if (!permissionsCollection) return alert('尚未設定資料庫，目前僅供介面預覽。');
   savePermissionButton.disabled = true;
   try {
     for (const staff of staffCache.filter((item) => !isProtectedOmniplay(item) && (!permissionStaffId || item.id === permissionStaffId))) {
@@ -323,7 +323,7 @@ const savePermissions = async () => {
           pages[key][action] = Boolean(permissionManager.querySelector(`[data-staff="${staff.id}"][data-page="${key}"][data-action="${action}"]`)?.checked);
         });
       });
-      await permissionsCollection.doc(staff.id).set({ staffId: staff.id, pages, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await permissionsCollection.doc(staff.id).set({ staffId: staff.id, pages, updatedAt: new Date() }, { merge: true });
     }
     togglePermissionModal(false);
   } catch (error) {
@@ -344,3 +344,4 @@ closePermissionButton?.addEventListener('click', () => togglePermissionModal(fal
 cancelPermissionButton?.addEventListener('click', () => togglePermissionModal(false));
 savePermissionButton?.addEventListener('click', savePermissions);
 permissionModal?.addEventListener('click', (event) => { if (event.target === permissionModal) togglePermissionModal(false); });
+

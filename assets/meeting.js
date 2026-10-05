@@ -1,5 +1,4 @@
 const meetingDb = window.omniplayDb;
-const meetingStorage = window.omniplayStorage;
 const meetingCollection = meetingDb?.collection('meeting');
 const meetingStaffCollection = meetingDb?.collection('staff');
 const meetingSettingsDoc = meetingDb?.collection('meetingSettings').doc('staffList');
@@ -374,21 +373,7 @@ const renderMeetingFiles = () => {
   }).join('');
 };
 
-const hydrateMeetingFileUrls = async () => {
-  if (!meetingStorage) return;
-  const unresolvedFiles = meetingState.files.filter((file) => !meetingFileUrl(file) && meetingFileStoragePath(file));
-  if (!unresolvedFiles.length) return;
-  await Promise.all(unresolvedFiles.map(async (file) => {
-    try {
-      file.url = await meetingStorage.ref(meetingFileStoragePath(file)).getDownloadURL();
-    } catch (error) {
-      console.warn('會議附件連結載入失敗：', meetingFileStoragePath(file), error);
-      file.linkError = true;
-    }
-  }));
-  renderMeetingFiles();
-};
-
+const hydrateMeetingFileUrls = async () => {};
 
 const openMeetingFilePreview = (file) => {
   const modal = document.querySelector('#meetingFilePreviewModal');
@@ -434,16 +419,7 @@ const downloadMeetingFile = async (file) => {
     clickDownloadLink(url, file.name);
     return;
   }
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('download failed');
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    clickDownloadLink(objectUrl, file.name);
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  } catch (error) {
-    window.open(url, '_blank', 'noopener');
-  }
+  window.showPreviewNotice();
 };
 
 const addMeetingFiles = async (files) => {
@@ -461,81 +437,7 @@ const addMeetingFiles = async (files) => {
   renderMeetingFiles();
 };
 
-const safeStorageName = (name) => String(name || 'file').replace(/[\\/#?%*:|"<>]/g, '_');
-
-const uploadMeetingFiles = async (onProgress = () => {}) => {
-  const pendingFiles = meetingState.files.filter((file) => file.file || file.pending);
-  if (!pendingFiles.length) return meetingState.files;
-  if (!meetingStorage) throw new Error('Firebase Storage 尚未完成初始化，無法上傳影片或檔案。');
-  const serial = document.querySelector('#meetingSerial')?.value?.trim() || getNextSerial();
-  const recordKey = meetingState.currentId || serial || `new-${Date.now()}`;
-  const uploadedFiles = [];
-  const totalBytes = pendingFiles.reduce((sum, item) => sum + Number(item.file?.size || item.size || 0), 0);
-  let completedBytes = 0;
-  for (const fileItem of meetingState.files) {
-    if (!fileItem.file && !fileItem.pending) {
-      uploadedFiles.push(fileItem);
-      continue;
-    }
-    const file = fileItem.file;
-    const path = `meeting-files/${recordKey}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeStorageName(file.name)}`;
-    const ref = meetingStorage.ref(path);
-    const uploadTask = ref.put(file, { contentType: file.type || 'application/octet-stream' });
-    const snapshot = await new Promise((resolve, reject) => {
-      const startedAt = Date.now();
-      let lastTransferred = 0;
-      let lastProgressAt = Date.now();
-      let lastRenderedAt = 0;
-      fileItem.uploadStatus = '正在建立上傳連線…';
-      renderMeetingFiles();
-      const stallTimer = setInterval(() => {
-        if (Date.now() - lastProgressAt < MEETING_UPLOAD_STALL_MS) return;
-        clearInterval(stallTimer);
-        reject(new Error(`「${file.name}」30 秒沒有傳輸資料。請檢查 Firebase Storage 是否為 Blaze 方案、儲存權限及網路連線。`));
-        uploadTask.cancel();
-      }, 1000);
-      uploadTask.on('state_changed', (progress) => {
-        if (progress.bytesTransferred > lastTransferred) {
-          lastTransferred = progress.bytesTransferred;
-          lastProgressAt = Date.now();
-        }
-        const transferred = completedBytes + progress.bytesTransferred;
-        const percent = totalBytes ? Math.min(100, (transferred / totalBytes) * 100) : 100;
-        const elapsedSeconds = Math.max(1, (Date.now() - startedAt) / 1000);
-        const bytesPerSecond = progress.bytesTransferred / elapsedSeconds;
-        fileItem.uploadStatus = progress.bytesTransferred
-          ? `${formatMeetingBytes(progress.bytesTransferred)} / ${formatMeetingBytes(progress.totalBytes)} · ${formatMeetingBytes(bytesPerSecond)}/s`
-          : '正在建立上傳連線…';
-        if (Date.now() - lastRenderedAt >= 500) {
-          lastRenderedAt = Date.now();
-          renderMeetingFiles();
-        }
-        onProgress({ percent, fileName: file.name, transferred, totalBytes, bytesPerSecond });
-      }, (error) => {
-        clearInterval(stallTimer);
-        reject(error);
-      }, () => {
-        clearInterval(stallTimer);
-        resolve(uploadTask.snapshot);
-      });
-    });
-    const url = await snapshot.ref.getDownloadURL();
-    completedBytes += file.size;
-    uploadedFiles.push({
-      name: file.name,
-      type: file.type || 'application/octet-stream',
-      size: file.size,
-      path,
-      url
-    });
-  }
-  meetingState.files.forEach((fileItem) => {
-    if (fileItem.objectUrl) URL.revokeObjectURL(fileItem.objectUrl);
-  });
-  meetingState.files = uploadedFiles;
-  renderMeetingFiles();
-  return uploadedFiles;
-};
+const uploadMeetingFiles = async () => { window.requireDatabase(); };
 
 const renderStaffSettings = () => {
   const list = document.querySelector('#staffSettingsList');
@@ -544,7 +446,7 @@ const renderStaffSettings = () => {
 };
 
 const saveStaffSettings = async () => {
-  await meetingSettingsDoc?.set({ names: staffNames(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  await meetingSettingsDoc?.set({ names: staffNames(), updatedAt: new Date() }, { merge: true });
 };
 
 const renderMeetingTableDesign = () => {
@@ -559,7 +461,7 @@ const saveMeetingTableDesign = async () => {
     .map((name) => name.trim())
     .filter(Boolean);
   DEFAULT_MEETING_TABS = tabs.length ? tabs : [...FALLBACK_MEETING_TABS];
-  await meetingDesignDoc?.set({ defaultTabs: DEFAULT_MEETING_TABS, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  await meetingDesignDoc?.set({ defaultTabs: DEFAULT_MEETING_TABS, updatedAt: new Date() }, { merge: true });
   renderMeetingTableDesign();
   document.querySelector('#meetingTableDesignModal').hidden = true;
   alert('會議紀錄表格設計已儲存');
@@ -838,6 +740,13 @@ const openMeetingFromQuery = () => {
 const initMeetingPage = async () => {
   if (window.permissionReady) await window.permissionReady;
   setFormEditable();
+  if (!meetingDb) {
+    meetingState.staffLoaded = true;
+    renderList();
+    renderStaffSettings();
+    renderMeetingTableDesign();
+    return;
+  }
   meetingStaffCollection?.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
     meetingState.defaultStaff = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(visibleMeetingStaff).map(staffName);
     if (!meetingState.staffLoaded) meetingState.staff = [...meetingState.defaultStaff];
@@ -1053,7 +962,7 @@ document.querySelector('#staffSettingsList')?.addEventListener('click', async (e
 document.querySelector('#meetingForm')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!canEditMeeting()) return alert('您沒有編輯權限');
-  if (!meetingCollection) return alert('Firebase 尚未完成初始化，無法儲存資料。');
+  if (!meetingCollection) return alert('尚未設定資料庫，目前僅供介面預覽。');
   const saveButton = document.querySelector('#saveMeetingButton');
   const originalText = saveButton.textContent;
   saveButton.disabled = true;
@@ -1078,13 +987,13 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
       data.status = 'auto';
       data.weeklyScheduledFor = previous.weeklyScheduledFor || originalDate;
     }
-    data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    data.updatedAt = new Date();
     let recordRef;
     if (meetingState.currentId) {
       recordRef = meetingCollection.doc(meetingState.currentId);
       await recordRef.set(data, { merge: true });
     } else {
-      recordRef = await meetingCollection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      recordRef = await meetingCollection.add({ ...data, createdAt: new Date() });
       meetingState.currentId = recordRef.id;
     }
     // 新增完成後 currentId 已建立，立即顯示刪除按鈕，不必重新整理頁面。
@@ -1096,7 +1005,7 @@ document.querySelector('#meetingForm')?.addEventListener('submit', async (event)
         saveButton.textContent = `上傳 ${percent.toFixed(2)}%`;
         saveButton.title = `正在上傳：${fileName}｜${formatMeetingBytes(transferred)} / ${formatMeetingBytes(totalBytes)}｜${formatMeetingBytes(bytesPerSecond)}/s`;
       });
-      await recordRef.set({ files: uploadedFiles, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      await recordRef.set({ files: uploadedFiles, updatedAt: new Date() }, { merge: true });
     }
     showList();
   } catch (error) {
@@ -1139,3 +1048,4 @@ document.querySelector('#closeMeetingFilePreviewModal')?.addEventListener('click
 document.querySelector('#meetingFilePreviewModal')?.addEventListener('click', (event) => { if (event.target.id === 'meetingFilePreviewModal') closeMeetingFilePreview(); });
 
 initMeetingPage();
+

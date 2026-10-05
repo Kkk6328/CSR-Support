@@ -333,7 +333,7 @@ const getRecord = (staffId, day) => {
     leaveStaffNames.includes(canonicalLeaveStaffName(staff.name));
 
   // Company-linked staff use /api/ext/leave as the only source of truth.
-  // Never fall back to Firebase records while switching months or after sync.
+  // Never fall back to legacy records while switching months or after sync.
   if (isCompanyLinkedStaff) {
     const externalPerson = externalPersonFor(staff.name);
     const externalRecord = externalPerson?.days?.[dayKey(day)] || {};
@@ -359,125 +359,13 @@ const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type) && !record?.label).length;
 
 const loadExternalLeave = async () => {
-  const token = ++externalLeaveLoadToken;
-  const targetMonth = monthKey(currentMonth);
-  // 2026-08-12 假表資料源切換(中魁拍板):優先走公司後端代理 /api/ext/leave(上游=尚堉假表
-  // 61.216.37.15:8080,輸出合約與舊 worker 逐格一致);失敗時 fallback 舊 Cloudflare worker,
-  // 讓 GitHub Pages 部署與後端故障時行為不變。
-  const apiBase = (window.CSR_API_BASE || '').replace(/\/+$/, '');
-  // ⛔ 死規則(2026-08-13 中魁):假表資料源只有兩個——①/api/ext/leave(公司排班鏡射=唯一真相)
-  // ②舊 worker(僅故障備援)。禁止新增任何其他來源(Apps Script/Google Sheet/JSONP/寫死資料)、禁止調換順序。
-  const sources = [
-    { url: `${apiBase}/api/ext/leave?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` },
-    { url: `https://omniplay-leave-sync.omniplaycsr168168.workers.dev/?month=${encodeURIComponent(targetMonth)}&t=${Date.now()}` }
-  ];
-  try {
-    const validPayloads = [];
-    let primaryPayload = null; // 主來源(後端鏡射)的回應;補薪日只認它
-    let lastError = null;
-    for (const source of sources) {
-      try {
-        const response = await fetch(source.url, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const candidate = await response.json();
-        if (candidate?.success === false) throw new Error(candidate.error || '同步來源回傳失敗');
-        const payloadPeople = candidate?.people;
-        const hasValidPeople = payloadPeople &&
-          typeof payloadPeople === 'object' &&
-          !Array.isArray(payloadPeople) &&
-          Object.keys(payloadPeople).some((name) => leaveStaffNames.includes(canonicalLeaveStaffName(name)));
-        if (candidate?.month !== targetMonth || !hasValidPeople) {
-          throw new Error('同步來源不是指定月份的休假人員資料');
-        }
-        validPayloads.push(candidate);
-        if (source === sources[0]) primaryPayload = candidate;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-    let payload = validPayloads[0] || null;
-    if (validPayloads.length > 1) {
-      const primary = validPayloads[0];
-      const fallback = validPayloads[1];
-      const mergedPeople = { ...(primary.people || {}) };
-
-      // Both endpoints mirror the same company leave system. The primary proxy
-      // can omit stars or detailed labels, so enrich each cell with the complete
-      // fallback record instead of choosing one whole payload.
-      Object.entries(fallback.people || {}).forEach(([fallbackName, fallbackPerson]) => {
-        const primaryName = Object.keys(mergedPeople)
-          .find((name) => canonicalLeaveStaffName(name) === canonicalLeaveStaffName(fallbackName));
-        const targetName = primaryName || fallbackName;
-        const primaryPerson = mergedPeople[targetName] || {};
-        const mergedDays = { ...(primaryPerson.days || {}) };
-
-        Object.entries(fallbackPerson?.days || {}).forEach(([day, fallbackRecord = {}]) => {
-          const primaryRecord = mergedDays[day] || {};
-          const specials = [...new Set([
-            ...(Array.isArray(primaryRecord.specials) ? primaryRecord.specials : []),
-            ...(Array.isArray(fallbackRecord.specials) ? fallbackRecord.specials : [])
-          ])];
-          const isCompanyEvent = specials.includes('event');
-          mergedDays[day] = {
-            ...fallbackRecord,
-            ...primaryRecord,
-            type: isCompanyEvent ? (fallbackRecord.type || '') : (primaryRecord.type || fallbackRecord.type || ''),
-            label: primaryRecord.label || fallbackRecord.label || '',
-            externalSymbol: primaryRecord.externalSymbol || fallbackRecord.externalSymbol || '',
-            specials
-          };
-        });
-
-        mergedPeople[targetName] = {
-          ...fallbackPerson,
-          ...primaryPerson,
-          shift: primaryPerson.shift || fallbackPerson.shift || '',
-          days: mergedDays
-        };
-      });
-
-      const primaryMaxDays = Number(primary.maxDays);
-      const fallbackMaxDays = Number(fallback.maxDays);
-      payload = {
-        ...fallback,
-        ...primary,
-        maxDays: Number.isFinite(primaryMaxDays) ? primaryMaxDays : fallbackMaxDays,
-        people: mergedPeople
-      };
-    }
-    if (!payload) throw lastError || new Error('假表來源皆無回應');
-    if (token !== externalLeaveLoadToken || payload.month !== targetMonth) return;
-    // 補薪日只認主來源(後端鏡射);備援沒有這項資訊,也不可跨來源合併 → 主來源沒給 = 無法確認(null)。
-    externalPayMakeupDays = Array.isArray(primaryPayload?.payMakeupDays)
-      ? new Set(primaryPayload.payMakeupDays.map(Number).filter((day) => Number.isInteger(day) && day >= 1 && day <= 31))
-      : null;
-    externalLeaveLoadState = 'success';
-    externalLeaveData = Object.fromEntries(Object.entries(payload.people || {})
-      .filter(([name]) => leaveStaffNames.includes(canonicalLeaveStaffName(name)))
-      .map(([name, person]) => [name, normalizeExternalPerson(person)])
-    );
-    const maxDays = Number(payload.maxDays);
-    externalMaxDays = Number.isFinite(maxDays) && maxDays >= 0 ? maxDays : null;
-    setLeaveSyncTime(new Date(), false);
-    if (leaveSourceStatus) {
-      leaveSourceStatus.textContent = externalMaxDays === null
-        ? '已連動休假資料，但缺少可休天數'
-        : '● 已連動公司休假系統';
-    }
-    staffList = sortStaffForLeave(staffList);
-    render();
-  } catch (error) {
-    if (token !== externalLeaveLoadToken) return;
-    externalLeaveData = {};
-    externalPayMakeupDays = null;
-    externalLeaveLoadState = 'error';
-    externalMaxDays = null;
-    console.error('同步外部假表失敗：', error);
-    setLeaveSyncTime(lastSuccessfulLeaveSyncAt, true);
-    if (leaveSourceStatus) leaveSourceStatus.textContent = '● 公司休假系統連動失敗';
-    setStatus('公司休假系統暫時無法同步，未使用預設休假或可休天數。', 'error');
-    render();
-  }
+  externalLeaveData = {};
+  externalPayMakeupDays = null;
+  externalLeaveLoadState = 'unconfigured';
+  externalMaxDays = null;
+  if (leaveSourceStatus) leaveSourceStatus.textContent = window.CSR_PREVIEW_MESSAGE;
+  if (leaveSyncTime) leaveSyncTime.textContent = '尚未設定資料來源';
+  render();
 };
 
 const queueSave = () => {
@@ -486,14 +374,14 @@ const queueSave = () => {
 };
 
 const saveMonthData = async () => {
-  if (!leaveCollection) return setStatus('Firebase 尚未完成初始化，無法儲存休假表。', 'error');
+  if (!leaveCollection) return setStatus('尚未設定資料庫，目前僅供介面預覽。', 'error');
   try {
     await leaveCollection.doc(monthKey(currentMonth)).set({
       month: monthKey(currentMonth),
       records: leaveData.records || {},
       quotas: leaveData.quotas || {},
       phoneOverrides: leaveData.phoneOverrides || {},
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: new Date()
     });
     setStatus('已自動儲存休假表。', 'success');
   } catch (error) {
@@ -594,7 +482,7 @@ const loadMonthlyShifts = async () => {
 
 const subscribeMonth = () => {
   unsubscribeLeave?.();
-  if (!leaveCollection) return;
+  if (!leaveCollection) { render(); return; }
   setStatus('載入休假表資料中...', 'info');
   externalLeaveData = {};
   externalPayMakeupDays = null;
@@ -708,7 +596,7 @@ leaveTableBody?.addEventListener('change', (event) => {
       month: monthKey(currentMonth),
       shift: target.value,
       type: 'staffShift',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: new Date()
     }, { merge: true }).catch((error) => {
       console.error('更新班別失敗：', error);
       setStatus('更新班別失敗，請稍後再試。', 'error');
@@ -738,7 +626,7 @@ const updateGlobalQuota = (value) => {
 };
 
 if (!leaveDb) {
-  setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
+  setStatus('尚未設定資料庫，目前僅供介面預覽。', 'error');
 } else {
   if (leaveStaffCollection) {
     unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
@@ -771,10 +659,4 @@ const syncLeavePermission = async () => {
 };
 syncLeavePermission();
 
-window.setInterval(loadExternalLeave, LEAVE_SYNC_INTERVAL_MS);
-window.setInterval(renderLeaveSyncCountdown, 1000);
-renderLeaveSyncCountdown();
-window.addEventListener('focus', loadExternalLeave);
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') loadExternalLeave();
-});
+loadExternalLeave();

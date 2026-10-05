@@ -12064,3 +12064,7 @@ body.handover-page #ragicForm .ragic-view-grid > .ragic-view-field-textarea {
 .meeting-detail-table .image-upload-area > input[type="file"]::file-selector-button {
   font-size: 13px;
 }
+
+
+/* Visible on every page of the personal interface preview. */
+.interface-preview-notice { margin: 0 0 16px; padding: 12px 16px; border: 1px solid var(--border, #dbe3ef); border-radius: 10px; background: var(--surface, #fff); color: var(--text-secondary, #64748b); font-size: 14px; line-height: 1.6; }

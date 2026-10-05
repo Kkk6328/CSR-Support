@@ -1,13 +1,7 @@
+// Register only this personal project's worker, relative to the current page.
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/OMNIPLAY-CSR-Support/sw.js?v=20260809-mobile-cards1', { updateViaCache: 'none' });
-}
-
-// 所有客服系統頁面都載入共用提醒監聽器。
-if (!document.querySelector('script[data-csr-reminders]')) {
-  const reminderScript = document.createElement('script');
-  reminderScript.src = `${window.location.pathname.includes('/work/') || window.location.pathname.includes('/service/') || window.location.pathname.includes('/meeting/') || window.location.pathname.includes('/resource/') ? '../' : ''}assets/reminders.js?v=20260805-background-push1`;
-  reminderScript.dataset.csrReminders = 'true';
-  document.head.appendChild(reminderScript);
+  const root = new URL(document.querySelector('script[src*="assets/app.js"]').src);
+  navigator.serviceWorker.register(new URL('../sw.js', root), { updateViaCache: 'none' }).catch(() => {});
 }
 
 const sidebar = document.querySelector('#sidebar');
@@ -53,18 +47,9 @@ const renderSidebar = () => {
     ? sidebarItems[0]
     : activeGroup?.items.find((item) => isActiveSidebarHref(item.href));
   sidebar.className = 'sidebar top-navigation';
-  // ⛔ 死規則(2026-08-13 中魁):「返回 MyERP」導覽鈕不可移除/改名/改成登出;
-  // 任何登入/登出/導覽重構都必須原樣保留(見 AGENTS.md 規則 10)。
-  // [2026-09-04 MyERP 搬遷] 舊入口 http://61.216.37.16:5173/portal 已停用(connection refused),
-  // MyERP 新家 = https://erp.leavesys.net(實測 /portal 200)→ 不再依 hostname 推導,一律固定新網址。
-  // [2026-09-04 中魁] 新 ERP 上線後大家一律直開本站(github.io),舊的「github.io 不顯示返回鈕」
-  // 判斷會讓按鈕永遠消失 → 拿掉 hostname 判斷,返回鈕無條件顯示。
-  const myerpPortalUrl = 'https://erp.leavesys.net/portal';
-  // target="_top":若本站被 ERP 用 iframe 內嵌,返回時整頁跳出框架;直開時行為不變。
-  const myerpReturnLink = `<a class="myerp-return-btn" id="myerpReturnBtn" href="${myerpPortalUrl}" target="_top" title="返回 MyERP 首頁"><span class="icon">⏎</span><span class="label">返回 MyERP</span></a>`;
   sidebar.innerHTML = `
     <div class="sidebar-header">
-      <div class="logo"><span class="logo-mark">OP</span><span class="label">CSR Support</span></div>
+      <div class="logo"><span class="logo-mark">CSR</span><span class="label">CSR Support</span></div>
       <strong class="mobile-current-page" aria-current="page">${activePage?.label || '首頁'}</strong>
       <button class="toggle-btn mobile-menu-btn" id="sidebarToggle" type="button" aria-label="展開功能表">☰</button>
     </div>
@@ -84,7 +69,6 @@ const renderSidebar = () => {
       </div>
     </nav>
     <div class="sidebar-footer" id="sidebarUserFooter">
-      ${myerpReturnLink}
       <div class="theme-switch-row"><span>淺色</span><button class="theme-toggle" data-theme-toggle="true" type="button" aria-label="切換顯示主題"></button><span>深色</span></div>
     </div>
   `;
@@ -215,9 +199,9 @@ const SESSION_KEYS = {
 
 const loginPath = isIndexPage ? 'index.html' : '../index.html';
 
-const getCurrentStaff = () => ({ id: 'system', code: 'SYSTEM', name: 'System', account: 'SYSTEM' });
+const getCurrentStaff = () => ({ id: 'preview', code: 'PREVIEW', name: '介面預覽', account: 'PREVIEW' });
 const isLoggedIn = () => true;
-if (!sessionStorage.getItem(SESSION_KEYS.name)) sessionStorage.setItem(SESSION_KEYS.name, 'System');
+
 
 const isOmniplayAdmin = () => true;
 
@@ -592,3 +576,4 @@ setupPullToRefresh();
   }, 300);
   window.initOmniplayDateTimePickers = enhanceAllDateTimeInputs;
 })();
+

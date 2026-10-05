@@ -21,8 +21,8 @@
     .personal-note-repeat { display: block; margin-top: 5px; color: #475569; font-weight: 800; }
     @media (max-width: 720px) { .personal-notification-repeat-row { grid-template-columns: auto 66px minmax(88px, 1fr); } }
   </style>
-  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
-  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -117,7 +117,7 @@
             <span>個人化通知</span>
             <span class="personal-notification-count" id="personalNotificationCount" hidden>0</span>
           </button>
-          <div class="user-pill">● 已連線 Firebase</div>
+          <div class="user-pill">● 尚未設定資料庫</div>
         </div>
       </header>
       <section class="dashboard" aria-label="首頁 dashboard">
@@ -251,11 +251,6 @@
       </div>
     </form>
   </div>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
-  <script src="assets/firebase-init.js"></script><script src="assets/api.js?v=20260811-batch-ref"></script>
   <script>
     const accountInput = document.getElementById('account');
     if (accountInput) {
@@ -271,9 +266,10 @@
       });
     }
   </script>
-  <script src="assets/reminders.js?v=20260823-shared-alarm1"></script>
+  <script src="assets/interface-only.js?v=20261005"></script>
   <script src="assets/app.js?v=20260904-show-myerp-return"></script>
   <script src="assets/dashboard.js?v=20260818-schedule-single-line"></script>
   <script src="assets/personal-notifications.js?v=20260826-completed-bottom1"></script>
 </body>
 </html>
+
