@@ -65,7 +65,7 @@ let staffList = [];
 let leaveData = { records: {}, quotas: {}, shifts: {}, quota: 8 };
 let externalLeaveData = {};
 // 2026-10-05 中魁:公司休假系統「本月公告」標「補薪」的日期(例:10/10 國慶日 補薪、10/25 光復節 補薪),
-// 由後端鏡射 /api/ext/leave 的 payMakeupDays 提供。null=無法確認(還沒載入 / 讀不到 / 沒給)→ 彈性早退暫停;
+// 由唯讀假表轉接資料的 payMakeupDays 提供。null=無法確認(還沒載入 / 讀不到 / 沒給)→ 彈性早退暫停;
 // Set=確定(空的=確定這個月沒有)。⛔ 不可把「不知道」當成「沒有」。
 let externalPayMakeupDays = null;
 // 這個月的假表讀取狀態:loading=還在讀(不秀「無法確認」);success / error=讀完了(補薪日還是 null 就秀警告)。
@@ -81,7 +81,7 @@ let lastSuccessfulLeaveSyncAt = null;
 let nextLeaveSyncAt = Date.now() + 5 * 60 * 1000;
 const LEAVE_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const storedLeavePermission = () => window.getPagePermission?.('leave') || { view: false, edit: false, delete: false, design: false };
-let canEditLeave = Boolean(window.isOmniplayAdmin?.());
+let canEditLeave = false; // Linked leave data is read-only without a persistence service.
 
 const pad = (value) => String(value).padStart(2, '0');
 const monthKey = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
@@ -135,7 +135,7 @@ const setLeaveSyncTime = (date, failed = false) => {
 };
 
 const normalizeStaff = (doc) => ({ id: doc.id, ...doc.data() });
-// ⛔ 死規則(2026-08-13 中魁):休假表僅顯示客服四人;排班資料唯一來源=/api/ext/leave 鏡射(見 AGENTS.md 規則 9)。
+// 個人版以唯讀假表轉接資料顯示客服四人。
 const leaveStaffNames = ['宋佳臻', '鄭晴心', '郭澄希', '熊茗雅'];
 const leaveStaffAliases = {
   '余中魁': '余中魁', '中魁': '余中魁',
@@ -158,7 +158,7 @@ const fixedLeaveStaffList = (items = []) => leaveStaffNames.map((name) => {
     ? { ...matched, name }
     : { id: `external_leave_${name}`, name, status: '啟用', leaveVisible: true, externalOnly: true };
 });
-// 休假表固定顯示五人，不等待已移除或無權限的人員管理資料。
+// 休假表固定顯示客服四人，不依賴人員資料庫。
 staffList = fixedLeaveStaffList();
 const getStaffSortOrder = (staff) => Number(fixedStaffOrderMap[canonicalLeaveStaffName(staff.name)] ?? staff.sortOrder ?? 999);
 const externalPersonFor = (name) => {
@@ -218,7 +218,7 @@ const normalizeExternalPerson = (person = {}) => ({
 const normalizeShift = (value) => value === '晚班' ? '晚' : value === '早班' ? '早' : value;
 const shiftDocId = (staffId, date = currentMonth) => `${staffId}_${monthKey(date)}`;
 const previousMonthOf = (date) => new Date(date.getFullYear(), date.getMonth() - 1, 1);
-const getStaffShift = (staff) => normalizeShift(externalPersonFor(staff.name)?.shift || leaveData.shifts?.[staff.id] || '早');
+const getStaffShift = (staff) => normalizeShift(externalPersonFor(staff.name)?.shift || '—');
 const sortStaffForLeave = (items) => [...items].sort((a, b) => {
   const shiftCompare = (getStaffShift(a) === '晚' ? 1 : 0) - (getStaffShift(b) === '晚' ? 1 : 0);
   if (shiftCompare) return shiftCompare;
@@ -254,9 +254,11 @@ const phoneDutyPairs = [
 const phoneOverrideKey = (pair, day) => `${pair.key}_${dayKey(day)}`;
 const phonePairForName = (name) => phoneDutyPairs.find((pair) => pair.members.includes(canonicalLeaveStaffName(name)));
 const isPhoneDutyDayEligible = (pair, day) =>
-  pair.members.every((name) => isWorkingRecord(externalRecordFor(name, day)));
+  pair.members.every((name) => Boolean(externalPersonFor(name)) && isWorkingRecord(externalRecordFor(name, day)))
+  && new Set(pair.members.map(name => externalPersonFor(name)?.shift)).size === 1;
 const buildPhoneDutyPlan = () => {
   const plan = new Map(phoneDutyPairs.flatMap((pair) => pair.members.map((name) => [name, new Set()])));
+  if (externalLeaveLoadState !== 'success') return plan;
   phoneDutyPairs.forEach((pair) => {
     const counts = Object.fromEntries(pair.members.map((name) => [name, 0]));
     for (let day = 1; day <= daysInMonth(currentMonth); day += 1) {
@@ -282,7 +284,7 @@ const hasPhoneDuty = (name, day) =>
   buildPhoneDutyPlan().get(canonicalLeaveStaffName(name))?.has(Number(day)) === true;
 
 // 2026-10-05 中魁拍板:公告標示「補薪」的日期=補薪日,早晚班全員不得彈性早退。
-// 來源=後端鏡射 /api/ext/leave 的 payMakeupDays(公司休假系統「本月公告」):
+// 來源=唯讀假表轉接資料的 payMakeupDays(公司休假系統「本月公告」):
 //   [日期…]=確定有、[]=確定沒有、null 或沒有這個欄位=無法確認 → 該月彈性早退整個暫停(寧可不給,不可錯給)。
 // ⛔ 不要再從請假格子找「補薪」字樣:實測全年格子都沒有這兩字(10/05 移除)。
 const payMakeupUnknown = () => externalPayMakeupDays === null;
@@ -332,7 +334,7 @@ const getRecord = (staffId, day) => {
   const isCompanyLinkedStaff = Boolean(staff) &&
     leaveStaffNames.includes(canonicalLeaveStaffName(staff.name));
 
-  // Company-linked staff use /api/ext/leave as the only source of truth.
+  // Linked staff use the authorized read-only leave source.
   // Never fall back to legacy records while switching months or after sync.
   if (isCompanyLinkedStaff) {
     const externalPerson = externalPersonFor(staff.name);
@@ -359,12 +361,32 @@ const getShift = (staff) => getStaffShift(staff);
 const leaveCount = (staffId) => Array.from({ length: daysInMonth(currentMonth) }, (_, index) => getRecord(staffId, index + 1)).filter((record) => ['leave', 'required'].includes(record?.type) && !record?.label).length;
 
 const loadExternalLeave = async () => {
+  const token = ++externalLeaveLoadToken;
+  const targetMonth = monthKey(currentMonth);
   externalLeaveData = {};
   externalPayMakeupDays = null;
-  externalLeaveLoadState = 'unconfigured';
   externalMaxDays = null;
-  if (leaveSourceStatus) leaveSourceStatus.textContent = window.CSR_PREVIEW_MESSAGE;
-  if (leaveSyncTime) leaveSyncTime.textContent = '尚未設定資料來源';
+  externalLeaveLoadState = 'loading';
+  if (leaveSourceStatus) leaveSourceStatus.textContent = '員工假表載入中…';
+  render();
+  try {
+    const payload = await window.csrLeaveSource.read(targetMonth);
+    if (token !== externalLeaveLoadToken) return;
+    externalLeaveData = Object.fromEntries(Object.entries(payload.people).map(([name, person]) => [name, normalizeExternalPerson(person)]));
+    externalMaxDays = payload.maxDays;
+    externalPayMakeupDays = payload.payMakeupDays === null ? null : new Set(payload.payMakeupDays);
+    externalLeaveLoadState = 'success';
+    staffList = sortStaffForLeave(staffList);
+    setLeaveSyncTime(new Date());
+    if (leaveSourceStatus) leaveSourceStatus.textContent = payload.maxDays === null ? '已連動員工假表｜來源未提供可休天數' : '● 已連動員工假表（唯讀）';
+    setStatus('');
+  } catch (error) {
+    if (token !== externalLeaveLoadToken) return;
+    externalLeaveLoadState = 'error';
+    setLeaveSyncTime(null, true);
+    if (leaveSourceStatus) leaveSourceStatus.textContent = '員工假表連線失敗';
+    setStatus(error.message || '員工假表無法讀取，請確認假表連線設定。', 'error');
+  }
   render();
 };
 
@@ -482,7 +504,7 @@ const loadMonthlyShifts = async () => {
 
 const subscribeMonth = () => {
   unsubscribeLeave?.();
-  if (!leaveCollection) { render(); return; }
+  if (!leaveCollection) { void loadExternalLeave(); return; }
   setStatus('載入休假表資料中...', 'info');
   externalLeaveData = {};
   externalPayMakeupDays = null;
@@ -626,7 +648,7 @@ const updateGlobalQuota = (value) => {
 };
 
 if (!leaveDb) {
-  setStatus('尚未設定資料庫，目前僅供介面預覽。', 'error');
+  render();
 } else {
   if (leaveStaffCollection) {
     unsubscribeStaff = leaveStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
@@ -652,7 +674,7 @@ window.addEventListener('beforeunload', () => {
 
 const syncLeavePermission = async () => {
   if (window.permissionReady) await window.permissionReady;
-  canEditLeave = Boolean(window.isOmniplayAdmin?.() || storedLeavePermission().edit === true);
+  canEditLeave = false;
   specialModeButtons.forEach((button) => { button.disabled = !canEditLeave; });
   if (!canEditLeave) setSpecialMode(null);
   render();
@@ -660,3 +682,11 @@ const syncLeavePermission = async () => {
 syncLeavePermission();
 
 loadExternalLeave();
+
+window.setInterval(loadExternalLeave, LEAVE_SYNC_INTERVAL_MS);
+window.setInterval(renderLeaveSyncCountdown, 1000);
+window.addEventListener('csr-leave-source-changed', loadExternalLeave);
+window.addEventListener('focus', loadExternalLeave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadExternalLeave();
+});
