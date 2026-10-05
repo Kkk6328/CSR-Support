@@ -4,8 +4,8 @@
 
 保留首頁、休假表、排程月曆、日誌、日誌 NEW、交接、提報、對接追蹤、告警、會議及知識庫等頁面。可以切換導覽、深淺色並預覽表單；紀錄、附件、個人通知及表格設計不會儲存。
 
-Firebase SDK、專案設定、Cloud Functions、舊 Worker 推播後端及公司 API 已移除。公司休假資料、遊戲排程試算表、收件匣連線、推播與 AI 服務暫不啟用。
-此專案沒有 NAS，也不會自動讀取原 OMNIPLAY 系統資料。
+Firebase SDK、專案設定、Cloud Functions、舊 Worker 推播後端及公司 API 已移除。員工假表可透過 HTTPS 轉接服務唯讀連動；遊戲排程試算表、收件匣連線、推播與 AI 服務暫不啟用。
+此專案沒有 NAS；員工假表與首頁今日上班共用 `assets/leave-source.js`，不依賴 OMNIPLAY 資料庫。轉接部署方式見 `leave-proxy/README.md`。
 
 ## 本機預覽
 

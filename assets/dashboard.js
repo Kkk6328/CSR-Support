@@ -20,6 +20,7 @@ const dashboardState = {
   leave: {},
   externalLeave: {},
   externalLeaveLoaded: false,
+  externalLeaveError: '',
   handovers: [],
   tracking: [],
   trackingSchema: null,
@@ -257,7 +258,7 @@ const updateTodayWorking = () => {
   const list = document.querySelector('#todayWorkingList');
   setText('#todayWorkingTitle', `今日上班（${displayDate(today)}）`);
   if (!list) return;
-  if (!dashboardDb) { list.textContent = window.CSR_PREVIEW_MESSAGE; return; }
+  if (dashboardState.externalLeaveError) { list.textContent = dashboardState.externalLeaveError; return; }
   if (!dashboardState.externalLeaveLoaded) { list.textContent = '載入中...'; return; }
   const externalPeople = dashboardState.externalLeave || {};
   const sourceNames = Object.keys(externalPeople).map((name) => String(name || '').trim()).filter(Boolean);
@@ -723,6 +724,31 @@ document.querySelectorAll('.shift-btn').forEach((button) => {
   });
 });
 updateDashboard();
+let dashboardLeaveLoadToken = 0;
+const loadDashboardExternalLeave = async () => {
+  const token = ++dashboardLeaveLoadToken;
+  dashboardState.externalLeave = {};
+  dashboardState.externalLeaveLoaded = false;
+  dashboardState.externalLeaveError = '';
+  updateTodayWorking();
+  try {
+    const payload = await window.csrLeaveSource.read(monthKey());
+    if (token !== dashboardLeaveLoadToken) return;
+    dashboardState.externalLeave = payload.people;
+  } catch (error) {
+    if (token !== dashboardLeaveLoadToken) return;
+    dashboardState.externalLeaveError = error.message || '員工假表暫時無法讀取。';
+  }
+  dashboardState.externalLeaveLoaded = true;
+  updateDashboard();
+};
+void loadDashboardExternalLeave();
+window.setInterval(loadDashboardExternalLeave, 5 * 60 * 1000);
+window.addEventListener('csr-leave-source-changed', loadDashboardExternalLeave);
+window.addEventListener('focus', loadDashboardExternalLeave);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadDashboardExternalLeave();
+});
 window.getShiftRange = getShiftRange;
 window.getDefaultShift = getDefaultShift;
 

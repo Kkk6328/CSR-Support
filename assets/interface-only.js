@@ -1,6 +1,6 @@
-// Personal preview has no database, storage service or company API connection.
+// Personal preview has no database or storage service; leave linkage is read-only.
 (() => {
-  const message = '尚未設定資料庫，目前僅供介面預覽，資料不會儲存。';
+  const message = '尚未設定資料庫，業務紀錄不會儲存；員工假表可另外連動。';
   window.CSR_PREVIEW_MESSAGE = message;
   window.omniplayDb = null;
   window.omniplayStorage = null;
