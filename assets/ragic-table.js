@@ -1138,8 +1138,9 @@ const setColumnWidth = (table, th, width) => {
   return newWidth;
 };
 const saveSchema = async () => {
-  if (!RAGIC_STATE.schemaDoc || !RAGIC_STATE.schema) return false;
-  RAGIC_STATE.schema = { ...RAGIC_STATE.schema, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+  if (!RAGIC_STATE.schemaDoc) { window.showPreviewNotice(); return false; }
+  if (!RAGIC_STATE.schema) return false;
+  RAGIC_STATE.schema = { ...RAGIC_STATE.schema, updatedAt: new Date() };
   await RAGIC_STATE.schemaDoc.set(RAGIC_STATE.schema, { merge: true });
   return true;
 };
@@ -1879,7 +1880,7 @@ const finishInlineEdit = async (td, { cancel = false } = {}) => {
       if (changed) {
         await RAGIC_STATE.collection.doc(record.id).update({
           [field.key]: newValue,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: new Date()
         });
       }
     }
@@ -2138,7 +2139,7 @@ const loadImage = (src) => new Promise((resolve, reject) => {
   image.src = src;
 });
 
-const compressImageForFirestore = async (file) => {
+const compressImageForPreview = async (file) => {
   const loadedImage = await loadImage(await readFileAsDataUrl(file));
   const scale = loadedImage.naturalWidth > 1200 ? 1200 / loadedImage.naturalWidth : 1;
   const canvas = document.createElement('canvas');
@@ -2166,7 +2167,7 @@ const uploadImageOriginal = async (file) => {
   if (!file) return '';
   if (!file.type?.startsWith('image/')) throw new Error('請選擇圖片檔案');
   if (file.size > MAX_IMAGE_BYTES) throw new Error('單張圖片不可超過 50MB');
-  return compressImageForFirestore(file);
+  return compressImageForPreview(file);
 };
 window.uploadRagicImageFile = uploadImageOriginal;
 
@@ -4731,7 +4732,7 @@ const syncLinkedHandoverFields = async ({ data = {}, logId = '' } = {}) => {
   await db.collection(COLLECTION_MAP.workHandover || 'handover').doc(`log_${logId}`).set({
     ...linkedData,
     linkedLogId: logId,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: new Date()
   }, { merge: true });
 };
 
@@ -4866,6 +4867,7 @@ const initRagicPage = async (config) => {
   };
   
   const saveDesignerSchema = async ({ close = false } = {}) => {
+    if (!schemaDoc) { window.showPreviewNotice(); return false; }
   if (!canUse('design')) {
     alert('您沒有設計權限');
     return false;
@@ -4925,7 +4927,7 @@ const initRagicPage = async (config) => {
 
     RAGIC_STATE.schema = {
       ...nextSchema,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: new Date()
     };
 
     await schemaDoc.set(
@@ -5423,6 +5425,7 @@ const addDesignerPairFields = (pairType) => {
     alert('表單排版已儲存');
   });  
   document.querySelector('#saveSchemaButton')?.addEventListener('click', async () => {
+    if (!schemaDoc) return window.showPreviewNotice();
     if (!canUse('design')) return alert('您沒有設計權限');
     await saveDesignerSchema({ close: true });
   });
@@ -5493,6 +5496,7 @@ const addDesignerPairFields = (pairType) => {
   if (isLogNewModule()) ragicForm.noValidate = true;
   ragicForm.addEventListener('submit', async (event) => {
   event.preventDefault();
+    if (!collection) return window.showPreviewNotice();
     const fields = getFields();
     if (!fields.length) {
       alert('表格結構尚未載入，請稍後再試');
@@ -5508,10 +5512,10 @@ const addDesignerPairFields = (pairType) => {
     try {
       const existingRecord = RAGIC_STATE.currentId ? RAGIC_STATE.records.find((record) => record.id === RAGIC_STATE.currentId) || {} : {};
       const data = await applySystemFieldValues(await getFormData(), existingRecord, collection);
-      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      data.updatedAt = new Date();
       let savedId = RAGIC_STATE.currentId;
       if (savedId) {
-        if (!existingRecord?.createdAt) data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        if (!existingRecord?.createdAt) data.createdAt = new Date();
         await collection.doc(savedId).set(data, { merge: true });
         // 日誌 NEW 的子表格可能含長對話與多張圖片；儲存後會直接回列表，
         // 不先建立一份馬上就被丟棄的完整檢視 DOM。
@@ -5519,7 +5523,7 @@ const addDesignerPairFields = (pairType) => {
       } else {
         const docRef = collection.doc();
         savedId = docRef.id;
-        await docRef.set({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); 
+        await docRef.set({ ...data, createdAt: new Date() }); 
       }
       clearRagicDirtyState();
       // 新增完成後立刻同步目前資料 ID 與刪除按鈕，不必等待快照或重新整理。
@@ -5575,6 +5579,7 @@ const addDesignerPairFields = (pairType) => {
   if (!collection || !schemaDoc) {
     RAGIC_STATE.schema = makeDefaultSchema(config);
     renderHeader();
+    applyFilters();
     if (newRecordButton) { newRecordButton.dataset.schemaReady = 'true'; newRecordButton.textContent = '+ 新增'; }
     applyRagicPermissionUi();
     return;
@@ -5588,7 +5593,7 @@ const addDesignerPairFields = (pairType) => {
     RAGIC_STATE.schema = normalizeSchema(defaultSchema);
   } else {
     /*
-     * Firebase 已儲存的設計為主要來源。
+     * 已儲存的設計為主要來源。
      * 不再用 config.fields 或 config.formLayout 覆蓋使用者設定。
      */
     const loadedSchema = doc.data();
@@ -5597,7 +5602,7 @@ const addDesignerPairFields = (pairType) => {
       await schemaDoc.set(
         {
           ...loadedSchema,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: new Date()
         },
         { merge: true }
       );
@@ -5624,3 +5629,4 @@ collection
     applyFilters();
   });
 };
+

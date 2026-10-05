@@ -1,67 +1,8 @@
+// Inbox layout is kept without reading saved connection settings or contacting a service.
 (() => {
-  const body=document.querySelector('#inboxBody'),modal=document.querySelector('#conversationModal'),content=document.querySelector('#conversationContent');
-  const setupModal=document.querySelector('#inboxSetupModal'),setupForm=document.querySelector('#inboxSetupForm'),setupError=document.querySelector('#inboxSetupError');
-  const state={items:[],messages:new Map()};
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const stamp=v=>{const d=new Date(v||0);return Number.isNaN(d.getTime())?'':d.toLocaleString('zh-TW',{hour12:false})};
-  const millis=v=>new Date(v||0).getTime()||Date.now();
-  const logStamp=v=>{const d=new Date(v||0);if(Number.isNaN(d.getTime()))return '';const h=d.getHours(),period=h>=12?'下午':'上午',hour=h%12||12,p=n=>String(n).padStart(2,'0');return `[${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${period} ${p(hour)}:${p(d.getMinutes())}]`};
-  const logConversation=list=>{let photoNo=0;return list.map(m=>{const sender=m.forwardSourceName||m.senderName||m.senderUsername||'未知',parts=[];if(m.text)parts.push(m.text);for(const media of mediaItems(m)){if(media.mediaType==='photo')parts.push(`（圖${++photoNo}）`);else parts.push(`[附件：${media.fileName||media.mediaType||'檔案'}]`)}return `${logStamp(m.sentAt)} ${sender}:\n${parts.join('\n')}`.trim()}).join('\n\n')};
-
-  const statusOf=c=>c.archived?'archived':c.imported?'imported':c.analyzed?'analyzed':'pending';
-  const statusLabel={pending:'未分析',analyzed:'已分析',imported:'已匯入',archived:'已封存'};
-  const config=()=>({base:(localStorage.getItem('omniplayInboxWorkerUrl')||'').replace(/\/$/,''),key:localStorage.getItem('omniplayInboxAccessKey')||''});
-  const openSetup=()=>{const old=config();document.querySelector('#inboxWorkerUrl').value=old.base;document.querySelector('#inboxAccessKey').value=old.key;setupError.hidden=true;setupError.textContent='';setupModal.hidden=false;requestAnimationFrame(()=>document.querySelector('#inboxWorkerUrl').focus())};
-  const closeSetup=()=>{setupModal.hidden=true;setupForm.reset();setupError.hidden=true};
-  const api=async(path,options={})=>{const cfg=config();if(!cfg.base||!cfg.key)throw new Error('尚未設定收件匣連線');const res=await fetch(cfg.base+path,{...options,headers:{authorization:'Bearer '+cfg.key,'content-type':'application/json',...(options.headers||{})}});if(!res.ok){if(res.status===401)throw new Error('收件匣存取碼不正確');if(res.status===403)throw new Error('僅管理員可永久刪除，管理員金鑰不正確');throw new Error('收件匣服務錯誤 '+res.status)}return res.json()};
-  const patch=(id,data)=>api('/api/conversations/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(data)});
-  const load=async()=>{try{body.innerHTML='<tr><td colspan="7">載入中…</td></tr>';state.items=await api('/api/conversations');render()}catch(e){console.error(e);body.innerHTML='<tr><td colspan="7">收件匣載入失敗：'+esc(e.message||e)+'。請按「連線設定」重新設定。</td></tr>'}};
-  const render=()=>{const source=document.querySelector('#sourceFilter').value,status=document.querySelector('#statusFilter').value,q=document.querySelector('#inboxSearch').value.trim().toLowerCase();const rows=state.items.filter(c=>(!source||c.source===source)&&(!status||statusOf(c)===status)&&(!q||[c.displayId,c.creatorName,c.creatorUsername].some(v=>String(v||'').toLowerCase().includes(q))));body.innerHTML=rows.length?rows.map(c=>`<tr><td>${esc(c.sourceLabel||'Telegram')}</td><td>${esc(c.displayId||c.id)}</td><td>${esc(stamp(c.createdAt))}</td><td>${esc(c.creatorName||c.creatorUsername||c.creatorId)}</td><td>${Number(c.messageCount)||0}則</td><td><span class="inbox-status is-${statusOf(c)==='pending'?'pending':'ready'}">${statusLabel[statusOf(c)]}</span></td><td><div class="inbox-actions"><button data-action="preview" data-id="${c.id}">預覽</button><button data-action="analyze" data-id="${c.id}">AI分析</button><button data-action="import" data-id="${c.id}">匯入</button><button class="danger ghost" data-action="archive" data-id="${c.id}">封存</button>${window.isOmniplayAdmin?.()?'<button class="danger" data-action="delete" data-id="'+c.id+'">永久刪除</button>':''}</div></td></tr>`).join(''):'<tr><td colspan="7">目前沒有 Conversation</td></tr>'};
-  const getMessages=async id=>{const list=await api('/api/conversations/'+encodeURIComponent(id)+'/messages');state.messages.set(id,list);return list};
-  const mediaUrl=m=>m.mediaUrl||'';
-  const mediaItems=m=>[...(m.mediaType?[m]:[]),...(Array.isArray(m.attachments)?m.attachments:[])];
-  const oneAttachmentHtml=m=>{const url=mediaUrl(m);if(!url)return '';if(m.mediaType==='photo')return `<div class="conversation-attachment"><a href="${esc(url)}" target="_blank" rel="noopener" title="開啟高畫質原圖"><img src="${esc(url)}" alt="Conversation 圖片"></a><small>點擊圖片開啟原圖</small></div>`;if(m.mediaType==='video')return `<div class="conversation-attachment"><video src="${esc(url)}" controls></video></div>`;return `<div class="conversation-attachment">附件：<a href="${esc(url)}" target="_blank" rel="noopener">${esc(m.fileName||'下載檔案')}</a></div>`};
-  const attachmentHtml=m=>mediaItems(m).map(oneAttachmentHtml).join('');
-  const preview=async c=>{document.querySelector('#conversationTitle').textContent=c.displayId||c.id;content.innerHTML='載入中…';modal.hidden=false;const list=await getMessages(c.id),parts=[];for(const m of list)parts.push(`<article class="conversation-message"><header><strong>${esc(m.forwardSourceName||m.senderName||m.senderUsername||'未知')}</strong><span>${esc(stamp(m.sentAt))}</span></header>${m.text?`<p>${esc(m.text)}</p>`:''}${attachmentHtml(m)}</article>`);if(c.analysis)parts.push(`<section class="analysis-card"><strong>AI 分析</strong>\n${esc(c.analysis.fullText||c.analysis.analysis||'')}</section>`);content.innerHTML=parts.join('')};
-  const responseText=r=>typeof r==='string'?r:(r?.message?.content||r?.choices?.[0]?.message?.content||r?.content||r?.text||'');
-  const parseJson=raw=>JSON.parse(String(raw||'').replace(/^\s*```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').match(/\{[\s\S]*\}/)?.[0]||raw);
-  const criticalValues=value=>[...new Set((String(value||'').match(/\b(?:[A-Za-z]{1,8}[-_])?\d[\dA-Za-z_-]{3,}\b|(?:NT\$|US\$|\$)\s*\d[\d,.]*/gi)||[]).map(token=>token.toLowerCase().replace(/[\s,]/g,'')))];
-  const validateAnalysis=(parsed,source,hasImages)=>{
-    const warnings=[];
-    const allowedRecommendations=new Set(['update','new','split']);
-    const allowedStatuses=new Set(['待辦中','處理中','觀察中','已完成','追客','無須追蹤']);
-    const allowedCategories=new Set(['需求','資訊','加白','客訴','卡單','注單確認','前端 (技術)','後端 (技術)','對接 (問題)','帳務 (問題)','遊戲 (問題)','後台 (問題)','待定']);
-    if(!allowedRecommendations.has(parsed.recommendation))warnings.push('案件建議格式不正確');
-    if(!allowedStatuses.has(parsed.suggestedStatus)){parsed.suggestedStatus='待辦中';warnings.push('案件狀態無法確認，已改為待辦中')}
-    if(!allowedCategories.has(parsed.suggestedCategory)){parsed.suggestedCategory='待定';warnings.push('案件分類無法確認，已改為待定')}
-    const sourceSet=new Set(criticalValues(source));
-    const output=[parsed.issue,parsed.customerBrief,parsed.supportBrief,parsed.analysis,parsed.summary].filter(Boolean).join('\n');
-    const unexpected=criticalValues(output).filter(token=>!sourceSet.has(token));
-    if(unexpected.length)warnings.push('AI 出現原始內容沒有的編號／金額：'+unexpected.slice(0,8).join('、'));
-    if(hasImages)warnings.push('圖片中的玩家 ID、注單號、日期與金額仍需對照原圖確認');
-    if(!String(parsed.analysis||'').trim()||!String(parsed.summary||'').trim())warnings.push('AI 分析或總結為空白');
-    return warnings;
-  };
-  const appendVerification=(text,warnings)=>warnings.length?`${String(text||'').trim()}\n\n【系統核對】\n${warnings.map(w=>'・'+w).join('\n')}`.trim():text;
-  const analyze=async(c,button)=>{if(!window.puter?.ai?.chat)return alert('Puter AI 尚未載入');if(!confirm('此操作會把這筆 Conversation 的文字與圖片傳送至 Puter AI 分析。確定繼續嗎？'))return;const list=await getMessages(c.id);button.disabled=true;button.textContent='分析中…';try{const imageFindings=[];for(const m of list.flatMap(mediaItems).filter(x=>x.mediaType==='photo'&&mediaUrl(x))){try{const result=await puter.ai.chat('請用繁體中文客觀辨識這張客服對話附件，只列出畫面可確認的錯誤訊息、ID、日期、遊戲、金額與狀態；不可猜測。',mediaUrl(m),{model:'gpt-5.4-nano',temperature:0,max_tokens:400});imageFindings.push(responseText(result))}catch(imageError){console.warn('圖片分析略過：',m.fileName,imageError);imageFindings.push(`[圖片 ${m.fileName||'附件'} 無法下載，已略過圖片辨識]`)}}const transcript=list.map((m,i)=>{const media=mediaItems(m).map(x=>`[${x.mediaType||'附件'} ${x.fileName||''}]`).join(' ');return `[${i+1}] ${m.forwardSourceName||m.senderName||m.senderUsername||'未知'}：${[m.text,media].filter(Boolean).join(' ')}`}).join('\n');const prompt=`你是 OMNIPLAY 客服 Conversation 分析助手。只依據原始訊息與圖片辨識結果，使用繁體中文。玩家 ID、注單號、遊戲 ID、日期、時間與金額必須逐字複製，不得改寫、補零、換算或猜測。可能包含同一案件後續追問、已解決後的相似新問題，或同時存在 A/B 多個問題。請辨識案件邊界，但只能提供建議，不得自動決定。輸出純 JSON：{"issue":"兩行內完整問題描述","customerBrief":"問題描述的客戶重點，簡短一行","supportBrief":"問題描述的客服處理重點，簡短一行","analysis":"依序包含【客戶問題】【處理經過】【問題判斷】【目前進度】【後續待辦】","summary":"簡潔總結目前結果、進度與下一步","recommendation":"update|new|split","reason":"建議理由","suggestedStatus":"待辦中|處理中|觀察中|已完成|追客|無須追蹤","suggestedCategory":"需求|資訊|加白|客訴|卡單|注單確認|前端 (技術)|後端 (技術)|對接 (問題)|帳務 (問題)|遊戲 (問題)|後台 (問題)|待定"}。\n\n原始訊息：\n${transcript}\n\n圖片辨識：\n${imageFindings.join('\n---\n')}`;const parsed=parseJson(responseText(await puter.ai.chat(prompt,{model:'gpt-5.4-nano',temperature:0,max_tokens:1400})));const verificationWarnings=validateAnalysis(parsed,`${transcript}\n${imageFindings.join('\n')}`,imageFindings.length>0);const analysis={...parsed,verificationWarnings,verified:verificationWarnings.length===0,fullText:appendVerification(`${parsed.analysis||''}\n\n【AI 建議】${parsed.recommendation||''}：${parsed.reason||''}`,verificationWarnings),analyzedAt:new Date().toISOString()};await patch(c.id,{analysis,analyzed:true});Object.assign(c,{analysis,analyzed:true});render();await preview(c)}catch(e){console.error(e);alert('AI 分析失敗：'+(e.message||e))}finally{button.disabled=false;button.textContent='AI分析'}};
-  const importLog=async c=>{if(!c.analyzed||!c.analysis)return alert('請先按「AI分析」，完成後才能匯入日誌 NEW。');if(c.analysis.verificationWarnings?.length&&!confirm('系統核對發現需要人工確認的內容：\n\n'+c.analysis.verificationWarnings.join('\n')+'\n\n仍要匯入日誌 NEW 嗎？'))return;const list=await getMessages(c.id),attachments=list.flatMap(mediaItems).filter(x=>x.fileId||mediaUrl(x)).map(m=>({type:m.mediaType,url:mediaUrl(m),name:m.fileName||'',telegramFileId:m.telegramMessageId?m.fileId:'',sourceFileId:m.fileId||''}));const cfg=config(),draft={conversationId:c.id,displayId:c.displayId,source:c.source,createdAtMillis:millis(c.createdAt),suggestedStatus:c.analysis?.suggestedStatus||'待辦中',suggestedCategory:c.analysis?.suggestedCategory||'待定',conversationText:logConversation(list),attachments,analysis:c.analysis,inboxApiBase:cfg.base};sessionStorage.setItem('omniplayConversationImport',JSON.stringify(draft));sessionStorage.setItem('omniplayInboxAccessKey',cfg.key);await patch(c.id,{importDrafted:true});location.href='log-new.html?conversation='+encodeURIComponent(c.id)};
-  const permanentlyDelete=async c=>{
-    if(!window.isOmniplayAdmin?.())return alert('僅管理員可永久刪除');
-    if(!confirm('確定要永久刪除 '+(c.displayId||c.id)+'？\n\n此操作會刪除 Conversation 與全部訊息，無法復原。'))return;
-    const saved=localStorage.getItem('omniplayInboxAdminKey')||'';
-    const key=prompt('請輸入管理員永久刪除金鑰（INBOX_ADMIN_TOKEN）',saved);
-    if(key===null||!key.trim())return;
-    try{
-      await api('/api/conversations/'+encodeURIComponent(c.id),{method:'DELETE',headers:{'x-admin-key':key.trim()}});
-      localStorage.setItem('omniplayInboxAdminKey',key.trim());
-      state.items=state.items.filter(x=>x.id!==c.id);state.messages.delete(c.id);render();
-      alert((c.displayId||c.id)+' 已永久刪除');
-    }catch(e){console.error(e);alert('永久刪除失敗：'+(e.message||e))}
-  };
-  body.addEventListener('click',async e=>{const b=e.target.closest('[data-action]');if(!b)return;const c=state.items.find(x=>x.id===b.dataset.id);if(!c)return;if(b.dataset.action==='preview')await preview(c);if(b.dataset.action==='analyze')await analyze(c,b);if(b.dataset.action==='import')await importLog(c);if(b.dataset.action==='archive'&&confirm('封存後原始內容仍永久保存，確定封存？')){await patch(c.id,{archived:true});c.archived=true;render()}if(b.dataset.action==='delete')await permanentlyDelete(c)});
-  modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-close-modal]'))modal.hidden=true});
-  setupModal.addEventListener('click',e=>{if(e.target===setupModal)closeSetup()});
-  document.querySelector('#closeInboxSetup').addEventListener('click',closeSetup);document.querySelector('#cancelInboxSetup').addEventListener('click',closeSetup);
-  setupForm.addEventListener('submit',async e=>{e.preventDefault();const base=document.querySelector('#inboxWorkerUrl').value.trim().replace(/\/$/,''),key=document.querySelector('#inboxAccessKey').value.trim();if(!base||!key)return;try{new URL(base)}catch(_){setupError.textContent='Worker 網址格式不正確';setupError.hidden=false;return}localStorage.setItem('omniplayInboxWorkerUrl',base);localStorage.setItem('omniplayInboxAccessKey',key);state.messages.clear();closeSetup();await load()});
-  ['sourceFilter','statusFilter'].forEach(id=>document.querySelector('#'+id).addEventListener('change',render));document.querySelector('#inboxSearch').addEventListener('input',render);document.querySelector('#refreshInbox').addEventListener('click',load);document.querySelector('#configureInbox').addEventListener('click',openSetup);window.permissionReady?.then(load)||load();
+  const body = document.querySelector('#inboxBody');
+  if (body) body.innerHTML = '<tr><td colspan="7">尚未設定收件匣資料來源，目前僅供介面預覽。</td></tr>';
+  const modal = document.querySelector('#inboxSetupModal');
+  if (modal) modal.hidden = true;
+  document.querySelector('#refreshInbox')?.addEventListener('click', window.showPreviewNotice);
 })();

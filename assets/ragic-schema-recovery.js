@@ -8,7 +8,7 @@
     '/work/report.html',
     '/work/alert.html'
   ]);
-  const normalizedPath = window.location.pathname.replace(/^\/OMNIPLAY-CSR-Support/, '');
+  const normalizedPath = window.location.pathname.replace(/^\/CSR-Support/, '');
   if (!TARGET_PATHS.has(normalizedPath)) return;
 
   const button = () => document.querySelector('#newRecordButton');
@@ -55,3 +55,4 @@
     if (recoverWithConfiguredFields() || Date.now() - startedAt > 15000) window.clearInterval(timer);
   }, 250);
 })();
+

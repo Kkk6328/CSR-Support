@@ -6,8 +6,8 @@
   <title>日誌 NEW｜OMNIPLAY 客服系統</title>
   <meta name="log-new-ai-version" content="20260827-verification1" />
   <link rel="stylesheet" href="../assets/styles.css?v=20260827-dark-view-fix" />
-  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
-  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <link rel="manifest" href="../manifest.json" />
+  <link rel="icon" type="image/png" href="../assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -1345,7 +1345,7 @@
         </div>
         <div class="topbar-actions">
           <button class="secondary" id="designTableButton" type="button">設計表格</button>
-          <div class="user-pill">● 已連線 Firebase</div>
+          <div class="user-pill">● 尚未設定資料庫</div>
         </div>
       </header>
       <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
@@ -1391,18 +1391,11 @@
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/interface-only.js?v=20261005"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
   <script src="../assets/ragic-table.js?v=20260827-dark-view-fix"></script>
-  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
   <script>
-    // NAS 目前以 HTTP 開啟；非安全來源沒有 crypto.randomUUID，先提供 Puter SDK 相容實作。
+    // 相容沒有 crypto.randomUUID 的瀏覽器。
     (() => {
       if (typeof window.crypto?.randomUUID === 'function') return;
       const randomUUID = () => {
@@ -1421,7 +1414,6 @@
       }
     })();
   </script>
-  <script src="https://js.puter.com/v2/"></script>
   <script>
     initRagicPage({
       title: '日誌 NEW',
@@ -1646,10 +1638,10 @@
         // 客戶只能使用來源日誌的值，不能接受浮窗或 DOM 中被修改的內容。
         formData.field_1783792645702_pi66u = sourceCustomer;
         
-        // 取得 Firebase collection
+        // 取得資料來源
         const reportCollection = window.omniplayDb?.collection('report');
         if (!reportCollection) {
-          alert('Firebase 未初始化，請稍後再試');
+          alert('尚未設定資料庫，目前僅供介面預覽。');
           return;
         }
         
@@ -1658,8 +1650,8 @@
         const sourceLogUrl = sourceLogId ? `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(sourceLogId)}` : window.location.href;
         reportCollection.add({
           ...formData,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
           sourceLogId,
           sourceLogUrl,
           field_1783793471256_rn925: sourceLogUrl
@@ -1870,6 +1862,7 @@
 
     let logNewStaffCache = null;
     const loadLogNewStaff = async () => {
+      if (!window.omniplayDb) return [];
       if (Array.isArray(logNewStaffCache)) return logNewStaffCache;
       const snapshot = await window.omniplayDb.collection('staff').get();
       logNewStaffCache = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -2049,38 +2042,6 @@
     };
 
     // 一次性整理已儲存的日誌 NEW 對話；只更新有格式差異的 items 欄位。
-    const migrateSavedLogNewConversations = async () => {
-      const migrationKey = 'logNewConversationFormat:20260719-2';
-      if (sessionStorage.getItem(migrationKey)) return;
-      for (let attempt = 0; attempt < 20 && !window.omniplayDb; attempt += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-      if (!window.omniplayDb) return;
-      try {
-        const snapshot = await window.omniplayDb.collection('log_new').get();
-        const changes = [];
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data() || {};
-          if (!Array.isArray(data.items)) return;
-          const items = data.items.map((item) => {
-            if (!item || typeof item !== 'object' || typeof item.conversation !== 'string') return item;
-            return { ...item, conversation: normalizeLogNewConversation(item.conversation) };
-          });
-          if (JSON.stringify(items) !== JSON.stringify(data.items)) changes.push({ ref: doc.ref, items });
-        });
-        for (let start = 0; start < changes.length; start += 400) {
-          const batch = window.omniplayDb.batch();
-          changes.slice(start, start + 400).forEach(({ ref, items }) => batch.update(ref, { items }));
-          await batch.commit();
-        }
-        sessionStorage.setItem(migrationKey, 'done');
-        if (changes.length) alert(`已自動整理 ${changes.length} 筆日誌 NEW 的舊對話格式。`);
-      } catch (error) {
-        console.error('整理已儲存的日誌 NEW 對話失敗：', error);
-        alert(`舊對話批次整理失敗：${error?.message || '請確認 Firebase 權限後再試'}`);
-      }
-    };
-
     const bindConversationAutoFormat = () => {
       document.querySelectorAll('#ragicForm [data-subfield="conversation"]').forEach((textarea) => {
         if (textarea.dataset.conversationFormatBound) return;
@@ -2283,11 +2244,11 @@
     };
     const logNewAiCacheKey = (type, fingerprint) => `omniplay-log-new-ai-v2:${type}:${fingerprint}`;
     const readLogNewAiCache = (type, fingerprint) => {
-      try { return JSON.parse(localStorage.getItem(logNewAiCacheKey(type, fingerprint)) || 'null'); }
+      try { return null; }
       catch (_) { return null; }
     };
     const writeLogNewAiCache = (type, fingerprint, value) => {
-      try { localStorage.setItem(logNewAiCacheKey(type, fingerprint), JSON.stringify(value)); }
+      try { return; }
       catch (error) { console.warn('AI 快取儲存失敗：', error); }
     };
     const logNewRowFingerprint = (row) => {
@@ -2410,251 +2371,13 @@
       forceButton.dataset.logNewAiForce = 'true';
       forceButton.textContent = '↻ 全部重新分析';
       forceButton.title = '忽略快取並重新分析全部內容，會消耗較多 AI 額度。';
-      forceButton.addEventListener('click', () => {
-        if (!confirm('全部重新分析會再次消耗所有文字與圖片的 AI 額度，確定要繼續嗎？')) return;
-        button.dataset.forceAll = 'true';
-        button.click();
-      });
-      button.addEventListener('click', async () => {
-        const rows = [...section.querySelectorAll('.subtable-row')].filter((row) => row.querySelector('[data-subfield="conversation"]')?.value.trim() || getLogNewRowImages(row).length);
-        if (!rows.length) return alert('請先貼上「對話」或加入「對話圖片」。');
-        const forceAll = button.dataset.forceAll === 'true';
-        delete button.dataset.forceAll;
-        const jobs = rows.map((row) => {
-          const fingerprint = logNewRowFingerprint(row);
-          return { row, fingerprint, cached: forceAll ? null : readLogNewAiCache('row', fingerprint) };
-        });
-        const pendingJobs = jobs.filter((job) => !job.cached);
-        if (!forceAll && !pendingJobs.length) return alert('內容沒有變更，已保留原本的 AI 分析，不會重複消耗額度。');
-        if (!window.puter?.ai?.chat) return alert('免費 AI 載入失敗，請確認網路後重新整理頁面再試。');
-        if (!window.puter?.auth?.isSignedIn || !window.puter?.auth?.signIn) return alert('Puter 登入功能載入失敗，請重新整理頁面再試。');
-        if (!forceAll && !confirm(`將分析 ${pendingJobs.length} 筆新增或已修改內容；未變更內容不會重新送出。內容可能包含客戶資料，確定要繼續嗎？`)) return;
-
-        const originalText = button.textContent;
-        if (!puter.auth.isSignedIn()) {
-          button.textContent = '等待 Puter 登入…';
-          try {
-            await puter.auth.signIn();
-          } catch (error) {
-            console.error('Puter 登入失敗：', error);
-            const errorCode = String(error?.error || error?.code || '');
-            if (errorCode === 'popup_blocked') {
-              alert('Puter 登入視窗被瀏覽器封鎖。請允許此網站開啟彈出式視窗後，再按一次 AI 分析。');
-            } else if (errorCode === 'auth_window_closed') {
-              alert('已取消 Puter 登入，AI 分析尚未執行。');
-            } else {
-              alert(`Puter 登入失敗：${error?.msg || error?.message || '請稍後再試'}`);
-            }
-            button.textContent = originalText;
-            return;
-          }
-          if (!puter.auth.isSignedIn()) {
-            alert('Puter 尚未完成登入，AI 分析尚未執行。');
-            button.textContent = originalText;
-            return;
-          }
-        }
-
-        button.disabled = true;
-        forceButton.disabled = true;
-        const totalUnits = Math.max(1, pendingJobs.reduce((total, job) => total + getLogNewRowImages(job.row).length + 1, 0));
-        let completedUnits = 0;
-        let progress = 0;
-        let analysisSucceeded = false;
-        const showProgress = (value) => {
-          progress = Math.max(progress, Math.min(100, Math.round(value)));
-          button.textContent = `AI 分析中 ${progress}%`;
-        };
-        showProgress(0);
-        const progressTimer = setInterval(() => {
-          if (progress >= 92) return;
-          showProgress(progress + Math.max(1, Math.ceil((92 - progress) * 0.06)));
-        }, 700);
-        try {
-          const briefs = [];
-          for (let index = 0; index < jobs.length; index += 1) {
-            const job = jobs[index];
-            const row = job.row;
-            if (job.cached?.result) {
-              // 保留使用者在畫面上手動修正過的分析文字；快取只用於避免重跑與彙整問題描述。
-              briefs.push(job.cached.brief || {
-                customerBrief: job.cached.result.customerBrief || '',
-                supportBrief: job.cached.result.supportBrief || '',
-                startsWithInternal: false,
-                internalDepartment: '客服'
-              });
-              continue;
-            }
-            const conversationText = row.querySelector('[data-subfield="conversation"]')?.value.trim() || '（未提供文字對話）';
-            const conversationEntries = logNewConversationEntries(conversationText);
-            const visibleSpeakers = [...new Set(conversationEntries.map((entry) => entry.speaker).filter(Boolean))];
-            const startsWithInternal = conversationEntries.length ? isLogNewInternalSpeaker(conversationEntries[0].speaker) : false;
-            const firstInternalSpeaker = conversationEntries.find((entry) => isLogNewInternalSpeaker(entry.speaker))?.speaker || '';
-            const internalDepartment = logNewSpeakerDepartment(firstInternalSpeaker) || '客服';
-            const classifiedSpeakers = visibleSpeakers
-              .map((speaker) => {
-                const department = logNewSpeakerDepartment(speaker);
-                return `${speaker}＝${department ? `OMNIPLAY 內部／${department}` : '客戶／外部窗口'}`;
-              })
-              .join('；');
-            let conversation = `${conversationText}\n\n[系統圖片對照規則：圖片依上傳順序編號。對話中的（圖1）或(圖1)對應第一張圖片，（圖2）或(圖2)對應第二張，依此類推。必須以圖片標記所在的發言段落判斷提供者；有明確圖號時優先採用此對照，沒有圖號才依圖片來源選項與上下文判斷。]`;
-            const images = getLogNewRowImages(row);
-            const imageSource = row.querySelector('[data-subfield="image_source"]')?.value || '自動判斷';
-            const imageFindings = [];
-            if (images.length) {
-              for (let imageIndex = 0; imageIndex < images.length; imageIndex += 1) {
-                const imageFingerprint = logNewAiFastHash(`${imageSource}|${images[imageIndex]}`);
-                let imageText = forceAll ? '' : readLogNewAiCache('image', imageFingerprint)?.text || '';
-                if (!imageText) {
-                  const imageResponse = await puter.ai.chat(
-                    `請用繁體中文客觀辨識這張客服案件截圖。這是圖${imageIndex + 1}，圖片來源設定為「${imageSource}」。請列出畫面中的錯誤訊息、注單號、玩家ID、日期時間、遊戲名稱、金額、狀態與處理結果；看不清楚或不存在的資訊請寫未辨識，不可猜測。`,
-                    await logNewImageMedia(images[imageIndex], imageIndex),
-                    { model: 'gpt-5.4-nano', temperature: 0, max_tokens: 250 }
-                  );
-                  imageText = logNewAiResponseText(imageResponse);
-                  writeLogNewAiCache('image', imageFingerprint, { text: imageText });
-                }
-                imageFindings.push({
-                  owner: inferLogNewImageOwner(conversationText, imageIndex + 1, imageSource),
-                  text: `圖${imageIndex + 1}：${imageText}`
-                });
-                completedUnits += 1;
-                showProgress((completedUnits / totalUnits) * 92);
-              }
-              conversation += `\n\n[AI 圖像辨識結果]\n${imageFindings.map((item) => `${item.text}\n來源判斷：${item.owner}`).join('\n\n')}`;
-            }
-            const prompt = `你是 OMNIPLAY 客服案件分析助手。必須依照下方唯一且完整的 OMNIPLAY 內部團隊名單辨識發言者。\n\nOMNIPLAY 內部團隊名單（只能用於判斷內外部，不能把未出現在對話中的名單人員寫入分析）：\n${logNewTeamDirectoryText}\n\n本段對話實際出現的發言者：${visibleSpeakers.join('、') || '無法辨識'}\n\n人員判斷規則（必須遵守）：\n1. 名單內的人才是 OMNIPLAY 內部人員；不在名單內的發言者一律視為客戶或外部窗口，不得寫成「可能是內部」、「未在名錄中需確認」或把外部人員列入【內部處理】。\n2. 比對姓名時忽略大小寫、emoji、空格、底線、連字號，以及商務、AM、PM、RD、IT、SRE、DBA、OP 等部門後綴。\n3. igaming-op 是 OMNIPLAY 客服帳號；其訊息結尾「-代碼」是客服人員代碼。分析內只能照原文寫 igaming-op 或該代碼，不得把代碼展開成對話中沒出現的姓名。\n4. 即使沒有 Excel、圖片或附件，也必須只依文字對話的發言者與內容完成內外部判斷。\n5. 團隊名單只供身分比對。分析中可出現的姓名僅限「本段對話實際出現的發言者」，不得加入名單中其他未發言的人。\n\n附圖資訊：共 ${images.length} 張；使用者標記的圖片來源為「${imageSource}」。只有實際有圖片時才能寫圖片內容；沒有圖片時，省略所有圖片段落，不得寫圖片推論。\n\n事實判斷規則（必須遵守）：\n1. 嚴格按照對話時間順序判斷「誰先提出／告知、誰轉請同仁查看、誰回覆」。不可預設一定是客戶先提出問題。\n2. 如果是 OMNIPLAY 先告知客戶異常或狀態，必須明確寫成「OMNIPLAY／igaming-op 主動告知客戶」，不可改寫成客戶反映。\n3. 只能寫對話或圖片明確出現的人、事件、數字、狀態、處理與回覆。玩家 ID、注單號、遊戲 ID、日期、時間與金額必須逐字複製，不得改寫、補零、換算或猜測。不可自行補充原因、缺少資料、風險、確認結果、處理方案或下一步。\n4. 對話沒有要求補注單號、玩家 ID、遊戲、金額或其他資料時，禁止建議補資料。\n5. 客戶僅將訊息轉請自己的同仁查看時，只能寫「客戶方轉請同仁查看」及實際回覆，不得描述成 OMNIPLAY 內部處理。\n\n輸出規則：\n1. analysis 只保留有明確對話事實的段落，可使用【事件經過】、【客戶方回覆】、【目前進度】；沒有內容的【客戶問題】、【客戶圖片】、【內部處理】、【我方圖片】、【問題判斷】、【後續待辦】必須省略，不得用推測補滿。\n2. summary 最多 80 個中文字，只摘要已發生的事與目前明確回覆；對話未交代下一步時，不得自行新增下一步。\n3. customerBrief 最多 35 個中文字；若客戶沒有提出問題，應寫客戶實際動作或回覆，不得虛構客戶問題。\n4. supportBrief 最多 45 個中文字，只寫 OMNIPLAY 在對話中實際做過的事。\n5. 所有內容使用繁體中文，語意完整，不得輸出省略號、截斷句、emoji、特殊圖形或「�」字元。\n\n對話內容：\n${conversation}`;
-            const finalPrompt = `${prompt}
-
-系統已完成發言者分類：${classifiedSpeakers || '無法辨識'}。必須直接採用此分類，不得自行改判。
-
-最終簡化規則（優先於前面所有輸出規則）：
-1. analysis 最多兩句，只按時間順序寫對話明確發生的核心事件，不要標題、分段、人物關係分析、問題判斷或後續建議。
-2. summary 只能一句，寫目前明確進度，例如「等待客戶確認」。
-3. 先判斷對話共有幾個不同問題；同一問題的追問、補充與回覆不得重複計算。不同異常或不同需求才建立下一個編號。
-4. customerBrief 與 supportBrief 必須使用「1. 簡述 2. 簡述」格式，雙方針對同一問題必須使用相同編號。每項最多 20 個中文字，只保留核心問題、動作或處理結果。
-5. customerBrief 只寫客戶在各問題中的實際提出、回覆或處理狀態；客戶沒有對應內容時，該編號不要虛構內容。若客戶轉請自己的同仁確認，可簡寫為「已請人員確認」。
-6. supportBrief 只寫 OMNIPLAY 內部人員在各問題中的實際提出、回覆或處理結果；不要在內容中重複客服、商務、技術等部門名稱。沒有對應內容時，該編號不要虛構內容。
-7. 問題描述會由系統依角色合併成各一行，格式例如「客服：1. 確認4筆9015 2. 重新整理再登入」及「客戶：1. 已請人員確認 2. 玩家無法進入遊戲」。只能寫已知事實，不得加入分析或建議。
-8. 第一個問題由 OMNIPLAY 內部先提出，就先顯示該發言者的實際部門；由客戶先提出，就先顯示「客戶」。OMNIPLAY 內部部門由系統判斷，不得全部固定為客服。
-
-嚴格使用以下分隔標記；標記不得省略，不要加 Markdown 程式碼框：
-<<<ANALYSIS>>>
-一至兩句事實摘要
-<<<SUMMARY>>>
-一句目前進度
-<<<CUSTOMER_BRIEF>>>
-1. 客戶在問題1的簡述 2. 客戶在問題2的簡述
-<<<SUPPORT_BRIEF>>>
-1. OMNIPLAY在問題1的簡述 2. OMNIPLAY在問題2的簡述
-<<<END>>>`;
-            const options = {
-              model: 'gpt-5.4-nano',
-              temperature: 0,
-              max_tokens: 600
-            };
-            const response = await puter.ai.chat(finalPrompt, options);
-            const raw = logNewAiResponseText(response);
-            const result = parseLogNewAiResponse(raw);
-            result.analysis = mergeLogNewImageFindings(result.analysis, imageFindings);
-            result.verificationWarnings = validateLogNewAiResult({
-              raw,
-              result,
-              source: `${conversationText}\n${imageFindings.map((item) => item.text).join('\n')}`,
-              hasImages: images.length > 0
-            });
-            result.analysis = appendLogNewAiWarnings(result.analysis, result.verificationWarnings);
-            row.classList.toggle('has-ai-verification-warning', result.verificationWarnings.length > 0);
-            window.applyLogNewAiResult(row, result);
-            const brief = {
-              customerBrief: result.customerBrief || '',
-              supportBrief: result.supportBrief || '',
-              startsWithInternal,
-              internalDepartment
-            };
-            briefs.push(brief);
-            writeLogNewAiCache('row', job.fingerprint, { result, brief });
-            completedUnits += 1;
-            showProgress((completedUnits / totalUnits) * 98);
-          }
-          const issue = document.querySelector('#ragicForm [name="issue"]');
-          if (issue) {
-            const parseNumberedBriefItems = (value = '') => {
-              const text = String(value)
-                .replace(/\uFFFD/g, '')
-                .replace(/[◆◇�]+/g, '')
-                .replace(/\r\n?/g, '\n')
-                .trim();
-              if (!text) return [];
-              const matches = [...text.matchAll(/(?:^|\s)(\d{1,2})[.、．]\s*([\s\S]*?)(?=\s+\d{1,2}[.、．]\s*|$)/g)];
-              if (!matches.length) return [text.replace(/^\d{1,2}[.、．]\s*/, '').trim()].filter(Boolean);
-              const items = [];
-              matches.forEach((match) => {
-                const number = Math.max(1, Number(match[1]) || 1);
-                const brief = match[2]
-                  .replace(/\s+/g, ' ')
-                  .replace(/[。；，、\s]+$/, '')
-                  .trim();
-                if (brief) items[number - 1] = brief;
-              });
-              return items;
-            };
-            const roleItems = new Map();
-            const roleOrder = [];
-            const addRoleItem = (role, number, text) => {
-              if (!text) return;
-              if (!roleItems.has(role)) roleItems.set(role, []);
-              if (!roleOrder.includes(role)) roleOrder.push(role);
-              roleItems.get(role).push(`${number}. ${text}`);
-            };
-            let issueNumber = 0;
-            briefs.forEach((brief) => {
-              const customerItems = parseNumberedBriefItems(brief.customerBrief);
-              const supportItems = parseNumberedBriefItems(brief.supportBrief);
-              const itemCount = Math.max(customerItems.length, supportItems.length, 1);
-              const internalRole = brief.internalDepartment || '客服';
-              for (let itemIndex = 0; itemIndex < itemCount; itemIndex += 1) {
-                const customerItem = customerItems[itemIndex] || '';
-                const supportItem = supportItems[itemIndex] || '';
-                if (!customerItem && !supportItem) continue;
-                issueNumber += 1;
-                if (brief.startsWithInternal) {
-                  addRoleItem(internalRole, issueNumber, supportItem);
-                  addRoleItem('客戶', issueNumber, customerItem);
-                } else {
-                  addRoleItem('客戶', issueNumber, customerItem);
-                  addRoleItem(internalRole, issueNumber, supportItem);
-                }
-              }
-            });
-            issue.value = roleOrder
-              .map((role) => `${role}：${roleItems.get(role).join(' ')}`)
-              .join('\n');
-            issue.dispatchEvent(new Event('input', { bubbles: true }));
-          }
-          analysisSucceeded = true;
-          showProgress(100);
-          alert(`AI 分析完成：本次重新分析 ${pendingJobs.length} 筆，未變更內容沿用快取。請確認內容後再儲存。`);
-        } catch (error) {
-          console.error('日誌 NEW AI 分析失敗：', error);
-          alert(`AI 分析失敗：${error?.message || '請稍後再試'}`);
-        } finally {
-          clearInterval(progressTimer);
-          button.disabled = false;
-          forceButton.disabled = false;
-          if (analysisSucceeded) {
-            button.textContent = 'AI 分析完成 100%';
-            setTimeout(() => { if (!button.disabled) button.textContent = originalText; }, 1800);
-          } else {
-            button.textContent = originalText;
-          }
-        }
-      });
+      button.addEventListener('click', window.showPreviewNotice);
+      forceButton.addEventListener('click', window.showPreviewNotice);
       actionGroup.appendChild(button);
       actionGroup.appendChild(forceButton);
     };
 
-    // 設計器儲存成功並關閉後重新載入，確保最新 Firebase 排版立刻套用到日誌 NEW。
+    // 設計器儲存成功並關閉後重新載入，確保最新表格排版立刻套用到日誌 NEW。
     document.querySelector('#saveSchemaButton')?.addEventListener('click', () => {
       let checks = 0;
       const waitForDesignerSave = setInterval(() => {
@@ -2669,103 +2392,9 @@
       }, 200);
     });
 
-    const applyConversationImportDraft = async () => {
-      const raw = sessionStorage.getItem('omniplayConversationImport');
-      if (!raw || !new URLSearchParams(location.search).has('conversation')) return;
-      let draft; try { draft = JSON.parse(raw); } catch (_) { return; }
-      if (window.firebase?.auth && !firebase.auth().currentUser) {
-        try { await firebase.auth().signInAnonymously(); } catch (error) { console.warn('收件匣身份建立失敗', error); }
-      }
-      let row = null;
-      for (let attempt = 0; attempt < 60 && !row; attempt += 1) {
-        if (!document.querySelector('#ragicFormView:not([hidden])')) document.querySelector('#newRecordButton')?.click();
-        row = document.querySelector('#ragicForm [data-subtable="items"] .subtable-row');
-        if (!row) await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      if (!row) return alert('無法建立日誌匯入草稿，請重新從收件匣按「匯入」。');
-      const setValue = (selector, value) => {
-        const control = document.querySelector(selector);
-        if (!control || value == null) return;
-        control.value = value;
-        control.dispatchEvent(new Event('input', { bubbles: true }));
-        control.dispatchEvent(new Event('change', { bubbles: true }));
-      };
-      const created = draft.createdAtMillis ? new Date(draft.createdAtMillis) : new Date(draft.date);
-      if (!Number.isNaN(created.getTime())) {
-        const pad = value => String(value).padStart(2, '0');
-        setValue('#ragicForm [name="date"]', `${created.getFullYear()}-${pad(created.getMonth()+1)}-${pad(created.getDate())}T${pad(created.getHours())}:${pad(created.getMinutes())}`);
-      }
-      // AI 的狀態只能作為建議；匯入本身不可直接把日誌標成已完成。
-      // 先放入對話，之後若使用者選擇已完成，才能從最後一段正確帶入完成者與完成時間。
-      setValue('#ragicForm [data-subfield="conversation"]', draft.conversationText || '');
-      const importedStatus = draft.suggestedStatus === '已完成' ? '待辦中' : (draft.suggestedStatus || '待辦中');
-      setValue('#ragicForm [name="status"]', importedStatus);
-      setValue('#ragicForm [name="category"]', draft.suggestedCategory || '待定');
-      if (importedStatus === '已完成') await fillLogNewCompletionFields({ notify: false });
-      const images = (draft.attachments || []).filter(item => item.type === 'photo' && item.url).map(item => item.url);
-      const imageInput = row.querySelector('[data-subfield="conversation_images"]');
-      const imageArea = imageInput?.closest('.image-upload-area');
-      if (imageInput && imageArea && images.length) {
-        imageInput.dataset.imageValue = JSON.stringify(images);
-        showImagePreview(images, imageArea, '圖片');
-      }
-      const importedAnalysis = draft.analysis || {};
-      const analysisControl = row.querySelector('[data-subfield="ai_analysis"]');
-      const summaryControl = row.querySelector('[data-subfield="summary"]');
-      const issueControl = document.querySelector('#ragicForm [name="issue"]');
-      if (analysisControl) analysisControl.value = normalizeLogNewAiAnalysis(importedAnalysis.analysis || importedAnalysis.fullText || '');
-      if (summaryControl) summaryControl.value = importedAnalysis.summary || importedAnalysis.reason || '';
-      if (issueControl) {
-        issueControl.value = importedAnalysis.customerBrief || importedAnalysis.supportBrief
-          ? `客戶：${importedAnalysis.customerBrief || importedAnalysis.issue || ''}\n客服：${importedAnalysis.supportBrief || ''}`
-          : (importedAnalysis.issue || '');
-      }
-      [analysisControl, summaryControl, issueControl].filter(Boolean).forEach(control => {
-        control.dispatchEvent(new Event('input', { bubbles: true }));
-        control.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      window.__conversationImportId = draft.conversationId;
-      if (draft.inboxApiBase) sessionStorage.setItem('omniplayInboxApiBase', draft.inboxApiBase);
-      sessionStorage.removeItem('omniplayConversationImport');
-      history.replaceState({}, '', location.pathname);
-      alert('Conversation 與收件匣 AI 分析結果已完整匯入，請確認後儲存。');
-    };
-
-    document.querySelector('#ragicForm')?.addEventListener('submit', () => {
-      const conversationId = window.__conversationImportId;
-      if (!conversationId) return;
-      setTimeout(async () => {
-        try {
-          const logId = window.getCurrentRagicRecordId?.() || '';
-          if (!logId) return;
-          const apiBase = sessionStorage.getItem('omniplayInboxApiBase') || '';
-          const apiKey = sessionStorage.getItem('omniplayInboxAccessKey') || '';
-          if (apiBase && apiKey) {
-            const response = await fetch(apiBase.replace(/\/$/, '') + '/api/conversations/' + encodeURIComponent(conversationId), {
-              method: 'PATCH',
-              headers: { 'content-type': 'application/json', authorization: 'Bearer ' + apiKey },
-              body: JSON.stringify({ imported: true, importedLogId: logId })
-            });
-            if (!response.ok) throw new Error('Conversation API ' + response.status);
-          } else if (window.omniplayDb) {
-            await window.omniplayDb.collection('conversations').doc(conversationId).update({
-              imported: true,
-              importedAt: firebase.firestore.FieldValue.serverTimestamp(),
-              importedLogId: logId
-            });
-          }
-          window.__conversationImportId = '';
-          sessionStorage.removeItem('omniplayInboxApiBase');
-          sessionStorage.removeItem('omniplayInboxAccessKey');
-        } catch (error) { console.error('Conversation 匯入狀態更新失敗', error); }
-      }, 1800);
-    });
-    setTimeout(applyConversationImportDraft, 300);
-
     // 欄位結構只在執行期補齊，不再因結構差異自動重新載入頁面。
     new MutationObserver(enhanceLogNewAiUi).observe(document.querySelector('#ragicFormView'), { childList: true, subtree: true });
     enhanceLogNewAiUi();
-    migrateSavedLogNewConversations();
   </script>
 
   <script>
@@ -2927,3 +2556,4 @@
   </script>
 </body>
 </html>
+

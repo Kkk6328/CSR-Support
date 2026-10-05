@@ -51,7 +51,6 @@ const firstLaunchOtherPlatformDates = document.querySelector('#firstLaunchOtherP
 const firstLaunchOtherPlatformUatDate = document.querySelector('#firstLaunchOtherPlatformUatDate');
 const firstLaunchOtherPlatformProdDate = document.querySelector('#firstLaunchOtherPlatformProdDate');
 
-const GAME_SCHEDULE_FEED_URL = 'https://script.google.com/macros/s/AKfycbyaTbkqtkBfAzbPNqCw8VEnh43VrNLpfYK3WR3TUNtIZF8_QCh6AOncZ6jG_LbxVyni9g/exec';
 const GAME_SCHEDULE_LABEL = { id: 'google-game-sheet', name: '遊戲上線', color: '#2563eb' };
 const GAME_SCHEDULE_COLORS = {
   pm: '#f59e0b',
@@ -261,50 +260,7 @@ const syncSchedulePermission = async () => {
 };
 
 
-const loadGameScheduleFeedJsonp = () => new Promise((resolve, reject) => {
-  const callbackName = `__omniplayScheduleSync_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const script = document.createElement('script');
-  const cleanup = () => {
-    window.clearTimeout(timer);
-    script.remove();
-    delete window[callbackName];
-  };
-  const timer = window.setTimeout(() => {
-    cleanup();
-    reject(new Error('同步服務 JSONP 逾時'));
-  }, 20000);
-  window[callbackName] = (payload) => {
-    cleanup();
-    resolve(payload);
-  };
-  script.onerror = () => {
-    cleanup();
-    reject(new Error('同步服務 JSONP 無法載入'));
-  };
-  script.src = `${GAME_SCHEDULE_FEED_URL}?callback=${encodeURIComponent(callbackName)}&_=${Date.now()}`;
-  document.head.appendChild(script);
-});
-
-const validateGameSchedulePayload = (payload) => {
-  if (!payload?.success || !Array.isArray(payload.games)) {
-    throw new Error(payload?.error || '回傳格式錯誤');
-  }
-  return payload;
-};
-
-const loadGameScheduleFeed = async () => {
-  try {
-    const response = await fetch(`${GAME_SCHEDULE_FEED_URL}?_=${Date.now()}`, {
-      method: 'GET',
-      cache: 'no-store'
-    });
-    if (!response.ok) throw new Error(`同步服務回應 ${response.status}`);
-    return validateGameSchedulePayload(await response.json());
-  } catch (fetchError) {
-    console.warn('Apps Script fetch 失敗，改用 JSONP：', fetchError);
-    return validateGameSchedulePayload(await loadGameScheduleFeedJsonp());
-  }
-};
+const loadGameScheduleFeed = async () => { throw new Error(window.CSR_PREVIEW_MESSAGE); };
 
 const parseGameScheduleDate = (value) => {
   const parts = String(value || '').trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
@@ -350,7 +306,7 @@ const gameScheduleDocSuffix = (game = {}) => String(game.gameId || '')
 const syncFirstLaunchOtherPlatformSchedules = async (item, actor, enabled, uatDate, prodDate) => {
   const games = getScheduleGames(item);
   if (!games.length) throw new Error('此首發排程缺少遊戲資料。');
-  const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  const updatedAt = new Date();
   const targets = [
     { eventType: 'other-platform-uat', date: uatDate, meta: GAME_EVENT_META['other-platform-uat'], content: '其他平台測試環境開放' },
     { eventType: 'other-platform-prod', date: prodDate, meta: GAME_EVENT_META['other-platform-prod'], content: '其他平台正式環境開放' }
@@ -380,7 +336,7 @@ const syncFirstLaunchOtherPlatformSchedules = async (item, actor, enabled, uatDa
         date: target.date,
         title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
         content: target.content,
-        reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
+        reminderAt: new Date(reminderAt),
         labelId: displayMeta.labelId,
         labelName: displayMeta.labelName,
         labelColor: displayMeta.color,
@@ -416,7 +372,7 @@ const createUatSchedules = async (item, actor) => {
   const marketingGroups = groupGamesByCalendarDay(games, 8);
   const uatGroups = groupGamesByCalendarDay(games, 7);
   const prodGroups = groupGamesByCalendarDay(games, 0);
-  const updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+  const updatedAt = new Date();
   const marketingMeta = GAME_EVENT_META['marketing-material'];
   const uatMeta = GAME_EVENT_META['uat-announcement'];
   const prodMeta = GAME_EVENT_META['prod-launch'];
@@ -480,7 +436,7 @@ const createUatSchedules = async (item, actor) => {
           date: target.dateKey,
           title: `${displayMeta.labelName}｜${getGameTitle([game])}`,
           content: `${target.contentPrefix}\n${gameLine(game)}`,
-          reminderAt: firebase.firestore.Timestamp.fromDate(target.group.reminderAt),
+          reminderAt: new Date(target.group.reminderAt),
           labelId: displayMeta.labelId,
           labelName: displayMeta.labelName,
           labelColor: displayMeta.color,
@@ -713,7 +669,7 @@ const syncGameSchedules = async () => {
     });
 
     const batch = scheduleDb.batch();
-    const syncedAt = firebase.firestore.FieldValue.serverTimestamp();
+    const syncedAt = new Date();
     const actor = { id: 'google-game-sheet', code: 'SYNC', name: 'Google 遊戲上線表' };
     const desiredScheduleIds = new Set(rows.map((row) => row.id));
 
@@ -761,7 +717,7 @@ const syncGameSchedules = async () => {
           : `${row.contentPrefix}\n${gameLine(row.game)}`,
         reminderAt: preserveManualReminder
           ? existingItem.reminderAt
-          : firebase.firestore.Timestamp.fromDate(row.at),
+          : new Date(row.at),
         labelId: row.forceLabelMeta ? displayMeta.labelId : existingItem?.labelId || displayMeta.labelId,
         labelName: row.forceLabelMeta ? displayMeta.labelName : canonicalScheduleLabelName(existingItem?.labelName) || displayMeta.labelName,
         labelColor: existingItem?.labelColor || displayMeta.color,
@@ -774,7 +730,7 @@ const syncGameSchedules = async () => {
         updatedAt: syncedAt,
         updatedBy: actor
       };
-      if (row.endAt) payload.endAt = firebase.firestore.Timestamp.fromDate(row.endAt);
+      if (row.endAt) payload.endAt = new Date(row.endAt);
       batch.set(scheduleCollection.doc(row.id), payload, { merge: true });
     });
 
@@ -794,10 +750,7 @@ const syncGameSchedules = async () => {
 };
 
 const startAutomaticGameScheduleSync = () => {
-  if (!scheduleDataLoaded || !canEditSchedule || gameScheduleAutoTimer) return;
-  startGameScheduleCountdown(800);
-  window.setTimeout(() => syncGameSchedules(), 800);
-  gameScheduleAutoTimer = window.setInterval(() => syncGameSchedules(), GAME_SCHEDULE_SYNC_INTERVAL_MS);
+  if (scheduleSyncCountdown) scheduleSyncCountdown.textContent = '尚未設定資料來源';
 };
 
 const formatGameChangeTime = (value) => {
@@ -1416,7 +1369,7 @@ const saveLabelIfNeeded = async (name, color, selectedLabelId = '') => {
     await scheduleLabelCollection.doc(selectedLabel.id).set({
       name: normalizedName,
       color,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: new Date()
     }, { merge: true });
     return;
   }
@@ -1426,15 +1379,15 @@ const saveLabelIfNeeded = async (name, color, selectedLabelId = '') => {
     await scheduleLabelCollection.doc(existing.id).set({
       name: normalizedName,
       color,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: new Date()
     }, { merge: true });
     return;
   }
   await scheduleLabelCollection.add({
     name: normalizedName,
     color,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: new Date(),
+    updatedAt: new Date()
   });
 };
 
@@ -1656,7 +1609,7 @@ formEl?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (scheduleSaveInProgress) return;
   if (!canEditSchedule) return setMessage('您沒有編輯權限。');
-  if (!scheduleCollection) return setMessage('Firebase 尚未完成初始化，無法儲存排程。');
+  if (!scheduleCollection) return setMessage('尚未設定資料庫，目前僅供介面預覽。');
   const reminderAt = new Date(document.querySelector('#scheduleReminderAt').value);
   const endAtValue = document.querySelector('#scheduleEndAt').value;
   const endAt = endAtValue ? new Date(endAtValue) : null;
@@ -1670,15 +1623,15 @@ formEl?.addEventListener('submit', async (event) => {
     date: toDateKey(reminderAt), labelColor, labelName, repeat,
     title: document.querySelector('#scheduleTitle').value.trim(),
     content: document.querySelector('#scheduleContent').value.trim(),
-    reminderAt: firebase.firestore.Timestamp.fromDate(reminderAt),
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, deleted: false
+    reminderAt: new Date(reminderAt),
+    updatedAt: new Date(), updatedBy: user, deleted: false
   };
   if (endAt && endAt <= reminderAt) return setMessage('結束時間必須晚於提醒開始時間。');
-  if (endAt) payload.endAt = firebase.firestore.Timestamp.fromDate(endAt);
-  else if (editingId) payload.endAt = firebase.firestore.FieldValue.delete();
-  if (editingId) payload.endDate = firebase.firestore.FieldValue.delete();
+  if (endAt) payload.endAt = new Date(endAt);
+  else if (editingId) payload.endAt = window.requireDatabase();
+  if (editingId) payload.endDate = window.requireDatabase();
   if (repeat === 'custom') payload.repeatInterval = repeatInterval;
-  else if (editingId) payload.repeatInterval = firebase.firestore.FieldValue.delete();
+  else if (editingId) payload.repeatInterval = window.requireDatabase();
   if (!payload.title) return setMessage('請輸入標題。');
   const editingItem = scheduleList.find((entry) => entry.id === editingId);
   const confirmGameWorkflow = editingItem?.source === 'google-game-sheet'
@@ -1699,15 +1652,15 @@ formEl?.addEventListener('submit', async (event) => {
   }
   if (isEditingFirstLaunch) {
     payload.otherPlatformEnabled = otherPlatformEnabled;
-    payload.otherPlatformUatDate = otherPlatformEnabled ? otherPlatformUatDate : firebase.firestore.FieldValue.delete();
-    payload.otherPlatformProdDate = otherPlatformEnabled ? otherPlatformProdDate : firebase.firestore.FieldValue.delete();
+    payload.otherPlatformUatDate = otherPlatformEnabled ? otherPlatformUatDate : window.requireDatabase();
+    payload.otherPlatformProdDate = otherPlatformEnabled ? otherPlatformProdDate : window.requireDatabase();
   }
   const changes = editingItem ? buildScheduleChanges(editingItem, { ...payload, reminderAt, endAt }) : [];
-  if (!editingItem || changes.length) payload.history = firebase.firestore.FieldValue.arrayUnion({
+  if (!editingItem || changes.length) payload.history = window.requireDatabase({
     action,
     userId: user.id,
     userName: user.name,
-    at: firebase.firestore.Timestamp.fromDate(new Date()),
+    at: new Date(new Date()),
     changes
   });
   const saveButton = document.querySelector('#saveScheduleButton');
@@ -1719,7 +1672,7 @@ formEl?.addEventListener('submit', async (event) => {
   try {
     await saveLabelIfNeeded(labelName, labelColor, selectedScheduleLabelId);
     if (editingId) await scheduleCollection.doc(editingId).update(payload);
-    else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    else await scheduleCollection.add({ ...payload, createdBy: user, createdAt: new Date() });
     if (isEditingFirstLaunch) {
       saveStage = '建立其他平台排程';
       await syncFirstLaunchOtherPlatformSchedules(
@@ -1761,11 +1714,11 @@ deleteButton?.addEventListener('click', async () => {
   if (!canDeleteSchedule) return setMessage('您沒有刪除權限。');
   if (!editingId || !scheduleCollection || !confirm('確定要刪除此排程嗎？')) return;
   const user = currentUser();
-  await scheduleCollection.doc(editingId).update({ deleted: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: user, history: firebase.firestore.FieldValue.arrayUnion({ action: '刪除', userId: user.id, userName: user.name, at: firebase.firestore.Timestamp.fromDate(new Date()) }) });
+  await scheduleCollection.doc(editingId).update({ deleted: true, updatedAt: new Date(), updatedBy: user, history: window.requireDatabase({ action: '刪除', userId: user.id, userName: user.name, at: new Date(new Date()) }) });
   closeModal(true);
 });
 
-if (!scheduleDb) setStatus('Firebase 尚未完成初始化，請確認 firebase-init.js 是否已載入。', 'error');
+if (!scheduleDb) setStatus('尚未設定資料庫，目前僅供介面預覽。', 'error');
 else {
   unsubscribeStaff = scheduleStaffCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => { staffList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter(activeStaff); }, (error) => console.error('讀取人員資料失敗：', error));
   subscribeSchedules();
@@ -1776,3 +1729,4 @@ else {
 syncSchedulePermission();
 renderCalendar();
 window.addEventListener('beforeunload', () => { unsubscribeStaff?.(); unsubscribeSchedules?.(); unsubscribeLabels?.(); unsubscribeLeave?.(); });
+

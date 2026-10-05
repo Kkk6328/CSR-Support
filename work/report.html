@@ -8,8 +8,8 @@
   <meta http-equiv="Expires" content="0" />
   <title>提報｜OMNIPLAY 客服系統</title>
   <link rel="stylesheet" href="../assets/styles.css?v=20260827-dark-view-fix" />
-  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
-  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <link rel="manifest" href="../manifest.json" />
+  <link rel="icon" type="image/png" href="../assets/favicon-op.png?v=20260816" />
   <meta name="theme-color" content="#3B82F6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -26,7 +26,7 @@
           <h1>提報</h1>
           <p>問題提報與內部追蹤。</p>
         </div>
-        <div class="user-pill">● 已連線 Firebase</div>
+        <div class="user-pill">● 尚未設定資料庫</div>
       </header>
       <section class="ragic-card" id="ragicListView" aria-label="列表視圖">
         <div class="ragic-toolbar">
@@ -51,14 +51,8 @@
     </main>
   </section>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
-  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
-  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/interface-only.js?v=20261005"></script>
   <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
   <script src="../assets/ragic-table.js?v=20260827-dark-view-fix"></script>
   <script>
     const reportTrackingMode = new URLSearchParams(window.location.search).get('tracking') === 'open' || sessionStorage.getItem('reportTrackingFilter') === 'open';
@@ -158,3 +152,4 @@
   </script>
 </body>
 </html>
+

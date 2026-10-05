@@ -1,13 +1,22 @@
 {
-  "name": "OMNIPLAY CSR Support",
+  "name": "CSR Support",
   "short_name": "CSR Support",
-  "description": "OMNIPLAY 客服支援系統",
-  "start_url": "/OMNIPLAY-CSR-Support/index.html",
+  "description": "個人客服支援系統介面預覽",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#111827",
   "theme_color": "#3B82F6",
   "icons": [
-    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
-  ]
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "scope": "./"
 }

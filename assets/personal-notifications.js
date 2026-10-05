@@ -4,9 +4,6 @@
   const form = document.querySelector('#personalNotificationForm');
   if (!list || !modal || !form) return;
 
-  const account = sessionStorage.getItem('omniplayStaffCode') || 'guest';
-  const storageKey = `omniplay-personal-notifications:${account}`;
-  const timers = new Map();
   let items = readItems();
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -44,14 +41,8 @@
     if (repeat.end === 'count' && (Number(repeat.firedCount) || 0) >= (Number(repeat.endCount) || 1)) return null;
     return next;
   };
-  function readItems() {
-    try {
-      const value = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      return Array.isArray(value) ? value : [];
-    } catch (_) { return []; }
-  }
-  const saveItems = () => localStorage.setItem(storageKey, JSON.stringify(items));
-
+  function readItems() { return []; }
+  function saveItems() { window.requireDatabase(); }
   function render() {
     const ordered = [...items].sort((a, b) => {
       if (Boolean(a.completed) !== Boolean(b.completed)) return a.completed ? 1 : -1;
@@ -80,7 +71,7 @@
           <button type="button" data-action="delete">刪除</button>
         </div>
       </article>
-    `).join('') : '<p class="personal-notification-empty">目前沒有個人通知，按「新增」建立第一張便利貼。</p>';
+    `).join('') : '<p class="personal-notification-empty">尚未設定資料庫，個人通知僅供介面預覽。</p>';
     scheduleAlarms();
   }
 
@@ -123,120 +114,9 @@
     document.querySelector('#personalNotificationRepeatEndCount').disabled = !custom || end !== 'count';
   }
 
-  function scheduleAlarms() {
-    timers.forEach((timer) => clearTimeout(timer));
-    timers.clear();
-    items.filter((item) => item.type === 'alarm' && !item.completed && item.remindAt && !item.firedAt).forEach((item) => {
-      const delay = new Date(item.remindAt).getTime() - Date.now();
-      if (delay < -86400000) return;
-      const timer = window.setTimeout(() => fireAlarm(item.id), Math.max(0, Math.min(delay, 2147483647)));
-      timers.set(item.id, timer);
-    });
-  }
-  async function fireAlarm(id) {
-    const item = items.find((entry) => entry.id === id);
-    if (!item || item.completed || item.firedAt) return;
-    const repeat = item.repeat || { mode: 'none' };
-    repeat.firedCount = (Number(repeat.firedCount) || 0) + 1;
-    const next = nextOccurrence(item.remindAt, repeat);
-    item.repeat = repeat;
-    item.firedAt = next ? '' : new Date().toISOString();
-    if (next) item.remindAt = next.toISOString();
-    saveItems();
-    render();
-    const alarmText = item.content || '提醒時間到了';
-    if (window.csrReminderAlarm) {
-      const showPersonalAlarm = () => window.csrReminderAlarm.show({
-        title: `個人提醒｜${item.title}`,
-        text: alarmText,
-        snooze: showPersonalAlarm
-      });
-      showPersonalAlarm();
-    } else {
-      window.alert(`個人提醒\n\n${item.title}${item.content ? `\n${item.content}` : ''}`);
-    }
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const registration = await navigator.serviceWorker?.ready;
-      registration?.showNotification(item.title, {
-        body: alarmText,
-        icon: 'assets/icon-192.png',
-        badge: 'assets/icon-192.png',
-        tag: `personal-${item.id}`,
-        requireInteraction: true,
-        data: { url: '/OMNIPLAY-CSR-Support/' }
-      });
-    }
-  }
+  function scheduleAlarms() {}
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const id = document.querySelector('#personalNotificationId').value;
-    const type = document.querySelector('#personalNotificationType').value;
-    const title = document.querySelector('#personalNotificationTitleInput').value.trim();
-    const timeValue = document.querySelector('#personalNotificationTime').value;
-    const error = document.querySelector('#personalNotificationFormError');
-    if (!title) { error.textContent = '請輸入標題。'; return; }
-    if (type === 'alarm' && (!timeValue || new Date(timeValue).getTime() <= Date.now())) {
-      error.textContent = '鬧鐘時間必須晚於現在。'; return;
-    }
-    const repeatMode = document.querySelector('#personalNotificationRepeat').value;
-    const repeatEnd = form.querySelector('[name="personalNotificationRepeatEnd"]:checked')?.value || 'never';
-    const repeatEndDate = document.querySelector('#personalNotificationRepeatEndDate').value;
-    const repeatEndCount = Number(document.querySelector('#personalNotificationRepeatEndCount').value);
-    if (type === 'alarm' && repeatMode === 'custom' && repeatEnd === 'date' && !repeatEndDate) {
-      error.textContent = '請選擇重複結束日期。'; return;
-    }
-    if (type === 'alarm' && repeatMode === 'custom' && repeatEnd === 'count' && repeatEndCount < 1) {
-      error.textContent = '重複次數至少為 1 次。'; return;
-    }
-    if (type === 'alarm' && 'Notification' in window && Notification.permission === 'default') {
-      await Notification.requestPermission();
-    }
-    const old = items.find((item) => item.id === id);
-    const record = {
-      id: id || (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`),
-      type,
-      title,
-      content: document.querySelector('#personalNotificationContent').value.trim(),
-      remindAt: type === 'alarm' ? new Date(timeValue).toISOString() : '',
-      repeat: type === 'alarm' ? {
-        mode: repeatMode,
-        interval: repeatMode === 'custom' ? Math.max(1, Number(document.querySelector('#personalNotificationRepeatInterval').value) || 1) : 1,
-        unit: document.querySelector('#personalNotificationRepeatUnit').value,
-        end: repeatMode === 'custom' ? repeatEnd : 'never',
-        endDate: repeatMode === 'custom' && repeatEnd === 'date' ? repeatEndDate : '',
-        endCount: repeatMode === 'custom' && repeatEnd === 'count' ? repeatEndCount : 0,
-        firedCount: old?.remindAt === (type === 'alarm' ? new Date(timeValue).toISOString() : '') ? Number(old?.repeat?.firedCount) || 0 : 0
-      } : { mode: 'none' },
-      color: form.querySelector('[name="personalNotificationColor"]:checked')?.value || 'yellow',
-      completed: old?.completed || false,
-      completedAt: old?.completedAt || '',
-      createdAt: old?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      firedAt: old?.remindAt === (type === 'alarm' ? new Date(timeValue).toISOString() : '') ? old?.firedAt || '' : ''
-    };
-    items = id ? items.map((item) => item.id === id ? record : item) : [record, ...items];
-    saveItems(); render(); closeForm();
-  });
-
-  list.addEventListener('click', (event) => {
-    const button = event.target.closest('button[data-action]');
-    const card = button?.closest('[data-id]');
-    if (!button || !card) return;
-    const item = items.find((entry) => entry.id === card.dataset.id);
-    if (!item) return;
-    if (button.dataset.action === 'edit') return openForm(item);
-    if (button.dataset.action === 'toggle') {
-      item.completed = !item.completed;
-      item.completedAt = item.completed ? new Date().toISOString() : '';
-      item.updatedAt = new Date().toISOString();
-    }
-    if (button.dataset.action === 'delete') {
-      if (!window.confirm(`確定刪除「${item.title}」？`)) return;
-      items = items.filter((entry) => entry.id !== item.id);
-    }
-    saveItems(); render();
-  });
+  form.addEventListener('submit', event => { event.preventDefault(); window.showPreviewNotice(); });
   document.querySelector('#personalNotificationAdd').addEventListener('click', () => openForm());
   document.querySelector('#personalNotificationOpen').addEventListener('click', () => openForm());
   document.querySelector('#personalNotificationClose').addEventListener('click', closeForm);
@@ -248,3 +128,4 @@
   // 表單僅允許透過「×」或「取消」關閉，避免選擇時間途中視窗跳掉。
   render();
 })();
+
