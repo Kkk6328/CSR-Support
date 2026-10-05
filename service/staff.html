@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>人員管理｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260827-dark-view-fix" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body>
+  <section class="app-shell" aria-label="客服系統主畫面">
+<aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>人員管理</h1>
+          <p>客服人員資料與權限維護。</p>
+        </div>
+        <div class="user-pill">● 已連線 Firebase</div>
+      </header>
+      <section class="staff-panel" aria-label="人員管理列表">
+        <div class="panel-heading">
+          <div>
+            <h2>人員列表</h2>
+            <p>管理客服人員的編號、登入帳號與密碼。</p>
+          </div>
+          <div class="panel-actions"><button class="primary-button" id="addStaffButton" type="button">＋ 新增人員</button></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="staff-table">
+            <thead>
+              <tr>
+                <th scope="col">編號</th>
+                <th scope="col">姓名</th>
+                <th scope="col">帳號</th>
+                <th scope="col" data-omniplay-secret hidden>密碼</th>
+                <th scope="col">班別</th>
+                <th scope="col">休假表顯示</th>
+                <th scope="col">狀態</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody id="staffTableBody"></tbody>
+          </table>
+          <p class="empty-state" id="staffEmptyState">目前尚無人員資料，請點選「新增人員」建立第一筆資料。</p>
+        </div>
+      </section>
+      
+      <div class="modal-backdrop" id="staffModal" aria-hidden="true">
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="staffModalTitle">
+          <div class="modal-heading">
+            <h2 id="staffModalTitle">新增人員</h2>
+            <button class="icon-button" id="closeStaffModal" type="button" aria-label="關閉表單">✕</button>
+          </div>
+          <form class="staff-form" id="staffForm">
+            <label>
+              <span>編號</span>
+              <input id="staffCode" name="code" type="text" autocomplete="off" required />
+            </label>
+            <label>
+              <span>姓名</span>
+              <input id="staffName" name="name" type="text" autocomplete="name" required />
+            </label>
+            <label>
+              <span>帳號</span>
+              <input id="staffAccount" name="account" type="text" autocomplete="username" required />
+            </label>
+            <label data-omniplay-secret hidden>
+              <span>密碼</span>
+              <div class="password-input">
+                <input id="staffPassword" name="password" type="password" autocomplete="new-password" required />
+                <button class="icon-button" id="staffPasswordToggle" type="button" aria-label="切換表單密碼顯示">顯示</button>
+              </div>
+            </label>
+            <label>
+              <span>班別</span>
+              <select id="staffShift" name="shift" required>
+                <option value="早班">早班</option>
+                <option value="晚班">晚班</option>
+              </select>
+            </label>
+            <label class="permission-check">
+              <input id="staffLeaveVisible" name="leaveVisible" type="checkbox" checked />
+              <span>顯示於休假表</span>
+            </label>
+            <p class="form-message" id="staffFormMessage" hidden></p>
+            <div class="form-actions">
+              <button class="ghost-button" id="cancelStaffButton" type="button">取消</button>
+              <button class="primary-button" id="saveStaffButton" type="submit">儲存人員</button>
+            </div>
+          </form>
+        </section>
+      </div>
+          <div class="modal-backdrop" id="permissionModal" aria-hidden="true">
+        <section class="modal-card wide-modal" role="dialog" aria-modal="true" aria-labelledby="permissionModalTitle">
+          <div class="modal-heading">
+            <h2 id="permissionModalTitle">權限管理</h2>
+            <button class="icon-button" id="closePermissionModal" type="button" aria-label="關閉權限管理">✕</button>
+          </div>
+          <div class="permission-manager" id="permissionManager"></div>
+          <div class="form-actions">
+            <button class="ghost-button" id="cancelPermissionButton" type="button">取消</button>
+            <button class="primary-button" id="savePermissionButton" type="button">儲存權限</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="../assets/staff.js?v=20260805-secret-admin1"></script>
+</body>
+</html>

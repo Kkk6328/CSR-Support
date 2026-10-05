@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>首頁｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="assets/styles.css?v=20260827-dark-view-fix" />
+  <style>
+    .personal-notification-repeat { margin-bottom: 14px; }
+    #personalNotificationTimeField[hidden], #personalNotificationRepeatField[hidden] { display: none; }
+    .personal-notification-custom-repeat { margin: -2px 0 16px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+    .personal-notification-custom-repeat[hidden] { display: none; }
+    .personal-notification-repeat-title { margin-bottom: 16px; font-size: 17px; font-weight: 900; }
+    .personal-notification-repeat-row { display: grid; grid-template-columns: auto 80px minmax(100px, 1fr); gap: 8px; align-items: center; margin-bottom: 18px; }
+    .personal-notification-repeat-row input, .personal-notification-repeat-row select,
+    .personal-notification-repeat-end input[type="date"], .personal-notification-repeat-end input[type="number"] { min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 9px; color: var(--text); background: var(--panel-solid); font: inherit; }
+    .personal-notification-repeat-end { display: grid; gap: 12px; padding: 0; border: 0; }
+    .personal-notification-repeat-end legend { margin-bottom: 12px; font-weight: 800; }
+    .personal-notification-repeat-end label { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 8px; align-items: center; font-weight: 500; }
+    .personal-notification-repeat-end label:first-of-type { grid-template-columns: 22px auto; }
+    .personal-note-repeat { display: block; margin-top: 5px; color: #475569; font-weight: 800; }
+    @media (max-width: 720px) { .personal-notification-repeat-row { grid-template-columns: auto 66px minmax(88px, 1fr); } }
+  </style>
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <style>
+    .dashboard-todo-title-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .dashboard-todo-title-row h2 {
+      margin: 0;
+    }
+    .todo-category-filter,
+    .todo-event-filter {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .todo-event-filter {
+      flex-basis: 100%;
+      padding-left: 0;
+    }
+    .todo-event-filter[hidden] {
+      display: none;
+    }
+    .todo-category-btn {
+      appearance: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      color: #334155;
+      padding: 5px 12px;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .todo-category-btn:hover {
+      border-color: #3b82f6;
+      color: #2563eb;
+    }
+    .todo-category-btn.active {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #fff;
+    }
+    .todo-tag.schedule {
+      border-color: color-mix(in srgb, var(--schedule-label-color) 55%, #cbd5e1);
+      background: color-mix(in srgb, var(--schedule-label-color) 12%, #fff);
+      color: var(--schedule-label-color);
+    }
+    .dashboard-todo-list .schedule-todo-item > a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+    }
+    .schedule-todo-item strong {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    .schedule-todo-item .todo-tags {
+      flex: 0 0 auto;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    @media (max-width: 720px) {
+      .dashboard-todo-title-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>首頁</h1>
+          <p>快速查看客服支援系統入口。</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="personal-notification-open" id="personalNotificationOpen" type="button">
+            <span>個人化通知</span>
+            <span class="personal-notification-count" id="personalNotificationCount" hidden>0</span>
+          </button>
+          <div class="user-pill">● 已連線 Firebase</div>
+        </div>
+      </header>
+      <section class="dashboard" aria-label="首頁 dashboard">
+        <div class="dashboard-stats" id="dashboardStats">
+         <a class="dashboard-card today-working-card" href="service/leave.html">
+            <span class="dashboard-card-label" id="todayWorkingTitle">今日上班</span>
+            <div class="today-working-list" id="todayWorkingList">載入中...</div>
+          </a>
+          <a class="dashboard-card" href="work/handover.html">
+            <span class="dashboard-card-label">待交接</span>
+            <strong id="handoverFireCount">—</strong>
+          </a>
+          <a class="dashboard-card" href="work/report.html?tracking=open&amp;build=20260718-30" onclick="sessionStorage.setItem('reportTrackingFilter','open')">
+            <span class="dashboard-card-label">提報追蹤</span>
+            <strong id="trackingOpenCount">—</strong>
+            <small>待辦中／處理中／觀察中／追客</small>
+          </a>
+          <a class="dashboard-card" href="work/log.html">
+            <span class="dashboard-card-label">日誌</span>
+            <strong id="shiftLogCount">—</strong>
+            <small>交接時段內日誌</small>
+          </a>
+        </div>
+
+        <div class="dashboard-main-columns">
+        <section class="dashboard-todo-card" aria-label="今日事項列表">
+          <div class="panel-heading dashboard-todo-heading">
+            <div>
+              <div class="dashboard-todo-title-row">
+                <h2>今日事項</h2>
+                <div class="todo-category-filter" id="dashboardTodoFilters" role="group" aria-label="今日事項分類篩選" hidden></div>
+                <div class="todo-event-filter" id="todoEventFilter" role="group" aria-label="今日事項分頁篩選" hidden></div>
+              </div>
+              <p>顯示當班建立、更新及當日提醒的所有事項。</p>
+            </div>
+            <div class="shift-toggle" role="group" aria-label="今日事項班次切換">
+              <button class="shift-btn" id="morningShiftBtn" type="button" data-shift="morning">早班</button>
+              <button class="shift-btn" id="nightShiftBtn" type="button" data-shift="night">晚班</button>
+            </div>
+          </div>
+          <ul class="dashboard-todo-list" id="dashboardTodoList">
+            <li class="dashboard-empty">載入中...</li>
+          </ul>
+        </section>
+
+        <section class="personal-notification-panel" aria-labelledby="personalNotificationTitle">
+          <div class="personal-notification-heading">
+            <div>
+              <h2 id="personalNotificationTitle">個人化通知</h2>
+              <p>你的鬧鐘提醒與便利貼，只顯示在這個帳號的目前裝置。</p>
+            </div>
+            <button class="personal-notification-add" id="personalNotificationAdd" type="button">＋ 新增</button>
+          </div>
+          <div class="personal-notification-list" id="personalNotificationList">
+            <p class="personal-notification-empty">目前沒有個人通知，按「新增」建立第一張便利貼。</p>
+          </div>
+        </section>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <div class="personal-notification-modal" id="personalNotificationModal" hidden>
+    <form class="personal-notification-dialog" id="personalNotificationForm" role="dialog" aria-modal="true" aria-labelledby="personalNotificationDialogTitle">
+      <div class="personal-notification-dialog-head">
+        <div>
+          <span class="personal-notification-kicker">只屬於你的提醒</span>
+          <h2 id="personalNotificationDialogTitle">新增個人化通知</h2>
+        </div>
+        <button class="personal-notification-close" id="personalNotificationClose" type="button" aria-label="關閉">×</button>
+      </div>
+      <input id="personalNotificationId" type="hidden" />
+      <label class="personal-notification-field">
+        <span>類型</span>
+        <select id="personalNotificationType">
+          <option value="note">便利貼</option>
+          <option value="alarm">鬧鐘提醒</option>
+        </select>
+      </label>
+      <label class="personal-notification-field">
+        <span>標題</span>
+        <input id="personalNotificationTitleInput" maxlength="50" placeholder="例如：回覆 AM" required />
+      </label>
+      <label class="personal-notification-field">
+        <span>內容</span>
+        <textarea id="personalNotificationContent" maxlength="500" rows="4" placeholder="寫下要記得的事情…"></textarea>
+      </label>
+      <label class="personal-notification-field" id="personalNotificationTimeField" hidden>
+        <span>提醒時間</span>
+        <input id="personalNotificationTime" type="datetime-local" />
+      </label>
+      <div class="personal-notification-repeat" id="personalNotificationRepeatField" hidden>
+        <label class="personal-notification-field">
+          <span>重複</span>
+          <select id="personalNotificationRepeat">
+            <option value="none">不重複</option>
+            <option value="daily">每天</option>
+            <option value="weekly">每週</option>
+            <option value="monthly">每月</option>
+            <option value="custom">自定義</option>
+          </select>
+        </label>
+        <div class="personal-notification-custom-repeat" id="personalNotificationCustomRepeat" hidden>
+          <div class="personal-notification-repeat-title">↻ 自定義</div>
+          <div class="personal-notification-repeat-row">
+            <span>重複間隔：每</span>
+            <input id="personalNotificationRepeatInterval" type="number" min="1" max="365" value="1" aria-label="重複間隔" />
+            <select id="personalNotificationRepeatUnit" aria-label="重複單位">
+              <option value="day">天</option><option value="week">週</option><option value="month">月</option>
+            </select>
+          </div>
+          <fieldset class="personal-notification-repeat-end">
+            <legend>結束時間</legend>
+            <label><input type="radio" name="personalNotificationRepeatEnd" value="never" checked /> 無</label>
+            <label><input type="radio" name="personalNotificationRepeatEnd" value="date" /> 於：<input id="personalNotificationRepeatEndDate" type="date" disabled /></label>
+            <label><input type="radio" name="personalNotificationRepeatEnd" value="count" /> 次數：<input id="personalNotificationRepeatEndCount" type="number" min="1" max="999" value="1" disabled /></label>
+          </fieldset>
+        </div>
+      </div>
+      <fieldset class="personal-notification-colors">
+        <legend>便利貼顏色</legend>
+        <label><input type="radio" name="personalNotificationColor" value="yellow" checked><span class="color-dot yellow">黃色</span></label>
+        <label><input type="radio" name="personalNotificationColor" value="blue"><span class="color-dot blue">藍色</span></label>
+        <label><input type="radio" name="personalNotificationColor" value="pink"><span class="color-dot pink">粉色</span></label>
+        <label><input type="radio" name="personalNotificationColor" value="green"><span class="color-dot green">綠色</span></label>
+      </fieldset>
+      <p class="personal-notification-form-error" id="personalNotificationFormError" role="alert"></p>
+      <div class="personal-notification-actions">
+        <button class="secondary-button" id="personalNotificationCancel" type="button">取消</button>
+        <button class="primary-button" type="submit">儲存通知</button>
+      </div>
+    </form>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="assets/firebase-init.js"></script><script src="assets/api.js?v=20260811-batch-ref"></script>
+  <script>
+    const accountInput = document.getElementById('account');
+    if (accountInput) {
+      accountInput.addEventListener('compositionstart', function() {
+        this.composing = true;
+      });
+      accountInput.addEventListener('compositionend', function() {
+        this.composing = false;
+        this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+      });
+      accountInput.addEventListener('input', function() {
+        if (!this.composing) this.value = this.value.replace(/[^a-zA-Z0-9]/g, '');
+      });
+    }
+  </script>
+  <script src="assets/reminders.js?v=20260823-shared-alarm1"></script>
+  <script src="assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="assets/dashboard.js?v=20260818-schedule-single-line"></script>
+  <script src="assets/personal-notifications.js?v=20260826-completed-bottom1"></script>
+</body>
+</html>

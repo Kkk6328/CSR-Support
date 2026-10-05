@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>會議紀錄｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260924-meeting-file-button-only" />
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body>
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <section class="ragic-card" id="meetingListView" aria-label="會議紀錄列表">
+        <div class="ragic-toolbar">
+          <div><h2>會議紀錄列表</h2><p>顯示所有會議紀錄，點選任一列即可編輯。</p></div>
+          <div class="topbar-actions"><button class="secondary" id="designMeetingTableButton" type="button" hidden>設計表格</button><button class="primary" id="newRecordButton" type="button">+ 新增</button></div>
+        </div>
+        <div class="ragic-table-wrap">
+          <table class="ragic-table meeting-list-table">
+            <thead>
+              <tr><th>狀態</th><th>日期</th><th>時間</th><th>主持</th><th>紀錄</th><th>編號</th></tr>
+            </thead>
+            <tbody id="meetingTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+      
+      <section class="ragic-card" id="meetingFormView" aria-label="會議紀錄編輯" hidden>
+        <div class="ragic-form-toolbar"><h2 id="meetingFormTitle">新增會議紀錄</h2><div class="topbar-actions"><button class="secondary" id="staffSettingsButton" type="button">人員設定</button><button class="ghost danger" id="deleteMeetingButton" type="button">刪除</button><button class="primary" id="saveMeetingButton" form="meetingForm" type="submit">儲存</button><button class="secondary" id="backToListButton" type="button">返回列表</button></div></div>
+        <form id="meetingForm" class="meeting-form">
+          <section class="meeting-info-table" aria-label="基本資訊">
+            <div class="meeting-info-cell meeting-info-datetime"><label for="meetingDate">日期／時間</label><div class="meeting-datetime-fields"><input id="meetingDate" type="date" required><input id="meetingTime" type="time" required aria-label="時間"></div></div>
+            <div class="meeting-info-cell"><label for="meetingChair">主持</label><select id="meetingChair" data-staff-select required><option value="">請選擇</option></select></div>
+            <div class="meeting-info-cell"><label for="meetingRecorder">紀錄</label><select id="meetingRecorder" data-staff-select required><option value="">請選擇</option></select></div>
+            <div class="meeting-info-cell"><label for="meetingSerial">編號</label><input id="meetingSerial" type="text" readonly></div>
+            <div class="meeting-info-cell"><label for="meetingLocation">地點</label><select id="meetingLocation"></select></div>
+            <div class="meeting-info-cell"><label for="meetingStatus">會議狀態</label><select id="meetingStatus"><option value="auto">自動判斷</option><option value="completed">已完成</option><option value="postponed">延期</option><option value="cancelled">取消</option></select></div>
+            <div class="meeting-info-cell"><label for="meetingMorningAttendeesDisplay">早 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingMorningAttendees"><select id="meetingMorningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingMorningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
+            <div class="meeting-info-cell"><label for="meetingEveningAttendeesDisplay">晚 - 出席</label><div class="multi-select" data-attendee-dropdown="meetingEveningAttendees"><select id="meetingEveningAttendees" data-staff-select multiple hidden></select><div class="multi-select-display" id="meetingEveningAttendeesDisplay">請選擇</div><div class="multi-select-dropdown" role="listbox" aria-multiselectable="true"></div></div></div>
+            <div class="meeting-info-cell meeting-info-files"><label for="meetingFileInput">檔案</label><div class="meeting-file-upload" id="meetingFileDropZone" tabindex="0"><div>Ctrl+V 貼上檔案</div><input id="meetingFileInput" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"><div class="meeting-file-list" id="meetingFileList"></div></div></div>
+            <div class="meeting-info-cell meeting-info-note"><label for="meetingNote">備註</label><input id="meetingNote" type="text" autocomplete="off"></div>
+          </section>
+
+          <section class="meeting-tabs-section" aria-label="會議內容分頁">
+            <div class="meeting-tabs" id="meetingTabs" role="tablist"></div><div id="meetingTabPanels"></div>
+          </section>
+        <datalist id="meetingStaffOptions"></datalist>
+        </form>
+      </section>
+
+      <div class="ragic-modal" id="meetingTableDesignModal" hidden>
+        <div class="ragic-modal-card staff-settings-card">
+          <div class="ragic-form-toolbar"><h2>設計表格</h2><button class="ghost" id="closeMeetingTableDesignModal" type="button">關閉</button></div>
+          <div class="staff-settings-body">
+            <label for="meetingDefaultTabsInput">預設會議內容分頁（每行一個分頁名稱）</label>
+            <textarea id="meetingDefaultTabsInput" rows="8" placeholder="技術會議&#10;客服會議"></textarea>
+            <button class="primary" id="saveMeetingTableDesignButton" type="button">儲存設計</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="ragic-modal" id="staffSettingsModal" hidden>
+        <div class="ragic-modal-card staff-settings-card">
+          <div class="ragic-form-toolbar"><h2>人員設定</h2><button class="ghost" id="closeStaffSettingsModal" type="button">關閉</button></div>
+          <div class="staff-settings-body">
+            <div class="staff-settings-add"><input id="staffSettingsName" type="text" placeholder="輸入人員姓名"><button class="primary" id="addStaffSettingsName" type="button">新增</button></div>
+            <div class="staff-settings-list" id="staffSettingsList"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="ragic-modal" id="meetingImageModal" hidden>
+        <div class="ragic-modal-card ragic-image-modal-card">
+          <div class="ragic-form-toolbar"><h2>圖片</h2><a class="ghost" id="meetingOpenOriginal" target="_blank" rel="noopener">開啟原圖</a><button class="ghost" id="meetingImageFullscreen" type="button">全螢幕</button><button class="ghost" id="closeMeetingImageModal" type="button">關閉</button></div>
+          <img id="meetingPreviewImage" alt="放大圖片預覽">
+        </div>
+      </div>
+      
+      <div class="ragic-modal" id="meetingFilePreviewModal" hidden>
+        <div class="ragic-modal-card meeting-file-preview-card">
+          <div class="ragic-form-toolbar"><h2 id="meetingFilePreviewTitle">檔案預覽</h2><button class="ghost" id="closeMeetingFilePreviewModal" type="button">關閉</button></div>
+          <div class="meeting-file-preview-body" id="meetingFilePreviewBody"></div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="../assets/meeting.js?v=20261005-date-desc"></script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>排程表｜OMNIPLAY 客服系統</title>
+  <link rel="stylesheet" href="../assets/styles.css?v=20260909-schedule-search2" />
+  <style>
+    .day-agenda-heading-actions { display: flex; align-items: center; gap: 8px; }
+    .day-agenda-heading-actions .primary-button { min-height: 38px; padding: 7px 12px; white-space: nowrap; }
+
+    .game-pm-confirmed[hidden], .first-launch-other-platform[hidden], .first-launch-other-platform-dates[hidden] { display: none !important; }
+    .first-launch-other-platform { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid #d8e3f0; border-radius: 12px; background: #f8fbff; }
+    .schedule-form .first-launch-other-platform-toggle {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      margin: 0;
+      cursor: pointer;
+    }
+    .schedule-form .first-launch-other-platform-toggle input[type="checkbox"] {
+      flex: 0 0 20px;
+      width: 20px !important;
+      min-width: 20px !important;
+      max-width: 20px !important;
+      height: 20px !important;
+      min-height: 20px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      accent-color: var(--primary);
+    }
+    .first-launch-other-platform-copy { display: grid; gap: 2px; min-width: 0; text-align: left; }
+    .first-launch-other-platform-copy strong { color: var(--text); font-size: 14px; line-height: 1.4; }
+    .first-launch-other-platform-copy small { color: var(--text-secondary); font-size: 12px; font-weight: 500; line-height: 1.4; }
+    .first-launch-other-platform-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px solid #d8e3f0; }
+    @media (max-width: 640px) {
+      .first-launch-other-platform { padding: 12px; }
+      .first-launch-other-platform-dates { grid-template-columns: 1fr; }
+    }
+    /* Make the automatic-sync status readable in both light and dark themes. */
+    .schedule-sync-countdown {
+      border-color: #60a5fa !important;
+      background: #dbeafe !important;
+      color: #1e40af !important;
+      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .12);
+      font-weight: 800 !important;
+    }
+    .schedule-sync-countdown.is-syncing {
+      border-color: #f59e0b !important;
+      background: #fef3c7 !important;
+      color: #92400e !important;
+    }
+    .schedule-sync-countdown.is-error {
+      border-color: #ef4444 !important;
+      background: #fee2e2 !important;
+      color: #991b1b !important;
+    }
+    /* Keep the change-log dialog above the fixed navigation so its top border stays visible. */
+    #gameChangeLogModal { z-index: 10001; }
+    .game-change-log-card { border-color: #dbe4f0; }
+    #gameChangeLogModal .modal-heading { align-items: center; }
+    .game-change-log-title { min-width: 0; }
+    .game-change-log-heading-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .game-change-log-search { position: relative; display: flex; align-items: center; width: min(230px, 32vw); }
+    .game-change-log-search span { position: absolute; left: 12px; color: #64748b; pointer-events: none; }
+    .game-change-log-search input { width: 100%; min-height: 38px; padding: 8px 12px 8px 32px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: #172033; font: inherit; }
+    .game-change-log-search input:focus { outline: 2px solid rgba(59, 130, 246, .24); border-color: #3b82f6; }
+    .schedule-history-changes { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; }
+    .schedule-history-changes p { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; margin: 0; padding: 7px 8px; border-radius: 8px; background: var(--surface-muted); }
+    .schedule-history-changes p b { color: var(--text-secondary); }
+    .schedule-history-changes p span, .schedule-history-changes p strong { overflow-wrap: anywhere; white-space: pre-wrap; }
+    .schedule-history-changes p i { color: var(--text-muted); font-style: normal; }
+    @media (max-width: 640px) {
+      #gameChangeLogModal .modal-heading { align-items: stretch; flex-direction: column; gap: 12px; }
+      .game-change-log-heading-controls { width: 100%; margin-left: 0; }
+      .game-change-log-search { flex: 1; width: auto; }
+      .game-change-log-heading-controls .icon-button { flex: none; }
+      .schedule-history-changes p { grid-template-columns: 1fr; }
+      .schedule-history-changes p i { transform: rotate(90deg); justify-self: start; }
+    }
+  </style>
+  <link rel="manifest" href="/OMNIPLAY-CSR-Support/manifest.json" />
+  <link rel="icon" type="image/png" href="/OMNIPLAY-CSR-Support/assets/favicon-op.png?v=20260816" />
+  <meta name="theme-color" content="#3B82F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
+</head>
+<body>
+  <section class="app-shell" aria-label="客服系統主畫面">
+    <aside id="sidebar"></aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>排程表</h1>
+          <p>客服值班與班表排程維護。</p>
+        </div>
+        <div class="user-pill">● 已連線 Firebase</div>
+      </header>
+      <section class="schedule-panel" aria-label="排程表月曆">
+        <div class="panel-heading schedule-heading">
+          <div class="schedule-nav-left" aria-label="月份切換">
+            <button class="secondary-button schedule-period-step" id="prevSchedulePeriod" type="button" aria-label="上一個期間" title="上一個期間">‹</button>
+            <div class="schedule-period-picker-wrap">
+              <button class="schedule-period-label" id="schedulePeriodLabel" type="button" aria-haspopup="dialog" aria-expanded="false">—</button>
+              <div class="schedule-period-picker" id="schedulePeriodPicker" hidden>
+                <div class="period-picker-year">
+                  <button class="ghost-button" id="prevPickerYear" type="button" aria-label="上一年">‹</button>
+                  <select id="scheduleYearSelect" aria-label="選擇年份"></select>
+                  <button class="ghost-button" id="nextPickerYear" type="button" aria-label="下一年">›</button>
+                </div>
+                <div class="period-picker-months" id="scheduleMonthPicker" aria-label="選擇月份"></div>
+              </div>
+            </div>
+            <button class="secondary-button schedule-period-step" id="nextSchedulePeriod" type="button" aria-label="下一個期間" title="下一個期間">›</button>
+          </div>
+          <div class="schedule-heading-actions">
+            <div class="schedule-search-wrap">
+              <label class="schedule-search-field">
+                <span class="schedule-search-icon" aria-hidden="true">⌕</span>
+                <input id="scheduleSearchInput" type="search" placeholder="搜尋遊戲名稱、ID或標籤" aria-label="搜尋排程" aria-controls="scheduleSearchResults" aria-expanded="false" autocomplete="off" />
+              </label>
+              <div class="schedule-search-results" id="scheduleSearchResults" role="listbox" aria-label="排程搜尋結果" hidden></div>
+            </div>
+            <div class="view-switch" aria-label="檢視切換">
+              <button class="ghost-button is-active" id="monthViewButton" type="button" data-view="month">月</button>
+              <button class="ghost-button" id="yearViewButton" type="button" data-view="year">年</button>
+            </div>
+            <select class="schedule-filter-select" id="scheduleLabelFilter" aria-label="依標籤篩選排程">
+              <option value="">全部標籤</option>
+            </select>
+            <details class="schedule-more-menu">
+              <summary class="secondary-button" aria-label="開啟更多排程功能">⋯ 更多</summary>
+              <div class="schedule-more-popover">
+                <div class="schedule-sync-controls" id="scheduleSyncControls" hidden>
+                  <button class="schedule-more-action" id="syncGameScheduleButton" type="button">同步遊戲排程</button>
+                  <span class="schedule-sync-countdown" id="scheduleSyncCountdown" aria-live="polite">下次自動同步 05:00</span>
+                </div>
+                <button class="schedule-more-action" id="gameChangeLogButton" type="button">試算表變更</button>
+                <button class="schedule-more-action schedule-help-button" id="openScheduleHelp" type="button">使用說明</button>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div class="schedule-meta">
+          <p class="schedule-status" id="scheduleStatus" data-type="info" hidden></p>
+          <strong id="selectedScheduleDate" hidden>—</strong>
+        </div>
+        <div class="calendar-grid" id="scheduleCalendar" aria-label="排程月曆"></div>
+      </section>
+
+      <div class="modal-backdrop" id="gameChangeLogModal" aria-hidden="true">
+        <section class="modal-card game-change-log-card" role="dialog" aria-modal="true" aria-labelledby="gameChangeLogTitle">
+          <div class="modal-heading">
+            <div class="game-change-log-title">
+              <h2 id="gameChangeLogTitle">試算表變更紀錄</h2>
+              <p>排程頁開啟時會自動同步，並每 5 分鐘檢查一次。</p>
+            </div>
+            <div class="game-change-log-heading-controls">
+              <label class="game-change-log-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="gameChangeLogSearchInput" type="search" placeholder="搜尋遊戲名稱、ID或變更內容" aria-label="搜尋試算表變更紀錄" autocomplete="off" />
+              </label>
+              <button class="icon-button" id="closeGameChangeLog" type="button" aria-label="關閉試算表變更紀錄">✕</button>
+            </div>
+          </div>
+          <div class="game-change-log-list" id="gameChangeLogList"><p class="history-empty">載入中...</p></div>
+        </section>
+      </div>
+
+      <div class="modal-backdrop" id="scheduleHelpModal" aria-hidden="true">
+        <section class="modal-card schedule-help-card" role="dialog" aria-modal="true" aria-labelledby="scheduleHelpTitle">
+          <div class="modal-heading">
+            <div>
+              <h2 id="scheduleHelpTitle">排程表使用說明</h2>
+              <p>快速了解新增排程、查看當日事項與遊戲上線流程。</p>
+            </div>
+            <button class="icon-button" id="closeScheduleHelp" type="button" aria-label="關閉使用說明">✕</button>
+          </div>
+          <div class="schedule-help-content">
+            <section>
+              <h3>基本操作</h3>
+              <ol>
+                <li>使用月份兩側的箭頭切換日期，或點擊月份直接選擇年月。</li>
+                <li>點日期空白處可新增排程；點排程項目可查看或編輯。填寫結束日期後，月曆會以長條橫跨整段日期。</li>
+                <li>可切換「月／年」檢視，並使用「全部標籤」篩選。</li>
+              </ol>
+            </section>
+            <section>
+              <h3>每日事項顯示</h3>
+              <p>月檢視每個日期顯示前 2 筆。第 3 筆開始，日期旁會出現總數圓圈；圓圈會配合當天標籤顏色，不同類別則以多色顯示。點日期空白處或圓圈即可查看當天全部排程。</p>
+            </section>
+            <section>
+              <h3>標籤、標題與框線</h3>
+              <p class="schedule-help-label-note">標籤區可選擇顏色、輸入名稱；已設置過的標籤會收納在「類別」下拉選單。遊戲排程顯示「工作類型｜遊戲 ID (遊戲名稱)」。</p>
+              <div class="schedule-help-legends">
+                <span><i style="--help-color:#f59e0b"></i>橘色：向 AM 確認</span>
+                <span><i style="--help-color:#14b8a6"></i>綠色：行銷素材待辦</span>
+                <span><i style="--help-color:#8b5cf6"></i>紫色：UAT</span>
+                <span><i style="--help-color:#a855f7"></i>亮紫：⭐ 首發平台 UAT</span>
+                <span><i style="--help-color:#ec4899"></i>粉色：⭐ 首發平台 PROD</span>
+                <span><i style="--help-color:#06b6d4"></i>青色：其他平台 UAT</span>
+                <span><i style="--help-color:#4f46e5"></i>靛藍：其他平台 PROD</span>
+                <span><i style="--help-color:#65a30d"></i>草綠：獨家平台 UAT</span>
+                <span><i style="--help-color:#ca8a04"></i>金色：獨家平台 PROD</span>
+                <span><i style="--help-color:#2563eb"></i>藍色：PROD</span>
+                <span><b class="help-line is-dashed"></b>虛線：尚未發生</span>
+                <span><b class="help-line"></b>實心：時間已到或已發生</span>
+              </div>
+            </section>
+            <section>
+              <h3>同步遊戲排程</h3>
+              <ol>
+                <li>開啟排程表時會自動讀取 Google 遊戲上線表，之後每 5 分鐘同步一次；也可按「同步遊戲排程」立即更新。</li>
+                <li>按「試算表變更」可查看遊戲、變更欄位及原值 → 新值。</li>
+                <li>只匯入預計上線日期為 2026/01/01（含）之後，且有有效上線時間的遊戲。</li>
+                <li>2026/01～2026/06 的遊戲只在預計上線當日建立一列藍色「遊戲上線」資料。</li>
+                <li>2026/07/01 起的一般遊戲會先建立 AM 確認（前 14 天）；勾選「AM 已確認」並儲存後，才建立行銷素材（前 8 天）、UAT／測試環境（前 7 天）及上線當日資料。</li>
+                <li>2026/08/01 起會參照「備註 1」：含「首發」或「獨家」時，先在上線前 14 天建立「向 AM 確認」。勾選「AM 已確認」並儲存後，首發遊戲會建立「首發平台 UAT」及「首發平台 PROD」；獨家遊戲會建立「獨家平台 UAT」及「獨家平台 PROD」。完整備註也會同步到排程內容。</li>
+                <li>首次補入的歷史上線與流程資料不列入「試算表變更」；完成匯入後的新修改才會記錄。</li>
+              </ol>
+              <p class="schedule-help-note">同步只處理試算表中的遊戲上線日期，不影響手動建立的排程。</p>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      <div class="modal-backdrop" id="dayAgendaModal" aria-hidden="true">
+        <section class="modal-card day-agenda-card" role="dialog" aria-modal="true" aria-labelledby="dayAgendaTitle">
+          <div class="modal-heading">
+            <h2 id="dayAgendaTitle">當日排程</h2>
+            <div class="day-agenda-heading-actions">
+              <button class="primary-button" id="addDayScheduleButton" type="button">＋ 新增排程</button>
+              <button class="icon-button" id="closeDayAgendaModal" type="button" aria-label="關閉當日排程">✕</button>
+            </div>
+          </div>
+          <div class="day-agenda-list" id="dayAgendaList"></div>
+        </section>
+      </div>
+
+      <div class="modal-backdrop" id="scheduleModal" aria-hidden="true">
+        <section class="modal-card schedule-modal-card" role="dialog" aria-modal="true" aria-labelledby="scheduleModalTitle">
+          <div class="modal-heading">
+            <h2 id="scheduleModalTitle">新增排程</h2>
+            <button class="icon-button" id="closeScheduleModal" type="button" aria-label="關閉排程表單">✕</button>
+          </div>
+          <form class="schedule-form" id="scheduleForm">
+            <div class="label-row schedule-label-row">
+              <label><span>顏色</span><input id="scheduleLabelColor" type="color" value="#3b82f6" required /></label>
+              <label><span>名稱</span><input id="scheduleLabelName" type="text" placeholder="可輸入標籤名稱" /></label>
+              <label><span>類別</span><span class="schedule-label-category-control"><select id="scheduleLabelCategory" aria-label="選擇已設置標籤">
+                <option value="">自訂 / 新增標籤</option>
+              </select><button class="schedule-label-delete" id="deleteScheduleLabelButton" type="button" aria-label="刪除選取的類別" title="刪除選取的類別" hidden>×</button></span></label>
+            </div>
+            <label><span>標題</span><input id="scheduleTitle" type="text" required autocomplete="off" /></label>
+            <label><span>內容</span><textarea id="scheduleContent" rows="4" placeholder="輸入排程內容"></textarea></label>
+            <div class="label-row schedule-range-row">
+              <label><span>提醒開始時間</span><input id="scheduleReminderAt" type="datetime-local" required /></label>
+              <label><span>結束時間（選填）</span><input id="scheduleEndAt" type="datetime-local" /></label>
+            </div>
+            <label class="game-pm-confirmed" id="gamePmConfirmedLabel" hidden>
+              <span>遊戲上線流程</span>
+              <span><input id="gamePmConfirmed" type="checkbox" /> AM 已確認（勾選並儲存後，自動建立行銷素材、UAT 上架公告與 PROD 上架公告待辦）</span>
+            </label>
+            <section class="first-launch-other-platform" id="firstLaunchOtherPlatform" hidden aria-label="其他平台開放排程">
+              <label class="first-launch-other-platform-toggle">
+                <input id="firstLaunchOtherPlatformEnabled" type="checkbox" />
+                <span class="first-launch-other-platform-copy">
+                  <strong>設定其他平台開放排程</strong>
+                  <small>收到公司通知後，再填寫 UAT 與 PROD 開放日期</small>
+                </span>
+              </label>
+              <div class="first-launch-other-platform-dates" id="firstLaunchOtherPlatformDates" hidden>
+                <label><span>其他平台 UAT 日期</span><input id="firstLaunchOtherPlatformUatDate" type="date" /></label>
+                <label><span>其他平台 PROD 日期</span><input id="firstLaunchOtherPlatformProdDate" type="date" /></label>
+              </div>
+            </section>
+            <div class="label-row repeat-row">
+              <label><span>重複提醒</span><select id="scheduleRepeat">
+                <option value="none">不重複</option>
+                <option value="daily">每天</option>
+                <option value="weekly">每週</option>
+                <option value="monthly">每月</option>
+                <option value="custom">自訂</option>
+              </select></label>
+              <label id="scheduleRepeatIntervalLabel" hidden><span>自訂間隔天數</span><input id="scheduleRepeatInterval" type="number" min="1" step="1" value="1" /></label>
+            </div>
+            <section class="schedule-history" aria-label="設置歷程">
+              <h3>設置歷程</h3>
+              <div id="scheduleHistoryList" class="schedule-history-list"></div>
+            </section>
+            <p class="form-message" id="scheduleFormMessage" hidden></p>
+            <div class="form-actions">
+              <button class="danger-button" id="deleteScheduleButton" type="button">刪除</button>
+              <button class="ghost-button" id="cancelScheduleButton" type="button">取消</button>
+              <button class="primary-button" id="saveScheduleButton" type="submit">儲存</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+  </section>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js"></script>
+  <script src="../assets/firebase-init.js"></script><script src="../assets/api.js?v=20260811-batch-ref"></script>
+  <script src="../assets/reminders.js?v=20260809-push-registration1"></script>
+  <script src="../assets/app.js?v=20260904-show-myerp-return"></script>
+  <script src="../assets/schedule.js?v=20261005-save-feedback"></script>
+</body>
+</html>
