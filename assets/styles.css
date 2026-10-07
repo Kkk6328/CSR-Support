@@ -3832,8 +3832,8 @@ textarea,
 .ragic-view-field-textarea:not(.has-form-layout),
 .ragic-view-field-image:not(.has-form-layout),
 .ragic-view-field-file:not(.has-form-layout) { grid-column: 1 / -1; }
-.ragic-view-label { margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
-.ragic-view-value { color: var(--text); line-height: 1.7; word-break: break-word; white-space: normal; overflow: hidden; text-overflow: ellipsis; }
+.ragic-view-label { font-size: 14px; margin-bottom: 8px; color: var(--text-secondary); font-weight: 800; }
+.ragic-view-value { font-size: 14px; color: var(--text); line-height: 1.7; word-break: break-word; white-space: normal; overflow: hidden; text-overflow: ellipsis; }
 .ragic-view-field-textarea .ragic-view-value,
 .ragic-view-field-textarea .field-value {
   max-height: 150px;

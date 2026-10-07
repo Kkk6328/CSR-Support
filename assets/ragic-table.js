@@ -1145,16 +1145,7 @@ const saveSchema = async () => {
   return true;
 };
 
-const adjustFontSize = (fieldEl) => {
-  if (!fieldEl) return;
-  const width = fieldEl.offsetWidth;
-  let size = '14px';
-  if (width < 80) size = '11px';
-  else if (width < 120) size = '12px';
-  else if (width < 180) size = '13px';
-  fieldEl.style.fontSize = size;
-  fieldEl.querySelectorAll('.ragic-view-label, .ragic-view-value, .field-value, span, td, th').forEach((item) => { item.style.fontSize = size; });
-};
+// Resizing changes layout only; header/content styles keep their configured font sizes.
 const appendFormResizeHandles = (element, field, { target = field } = {}) => {
   if (!element || !target || element.dataset.formResizeBound === 'true') return element;
   element.dataset.formResizeBound = 'true';
@@ -1182,7 +1173,6 @@ const appendFormResizeHandles = (element, field, { target = field } = {}) => {
         element.style.height = `${height}px`;
         element.style.minHeight = `${height}px`;
       }
-      adjustFontSize(element);
     };
     const up = async () => {
       handle.classList.remove('resizing');
@@ -1197,7 +1187,6 @@ const appendFormResizeHandles = (element, field, { target = field } = {}) => {
   };
   right.addEventListener('mousedown', (event) => startResize(event, 'width'));
   bottom.addEventListener('mousedown', (event) => startResize(event, 'height'));
-  adjustFontSize(element);
   return element;
 };
 
